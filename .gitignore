@@ -8,3 +8,4 @@ dist/
 .idea/
 coverage/
 *.tgz
+.mcpregister_github_token
