@@ -1,0 +1,57 @@
+{
+  "type": "module",
+  "name": "avc-test-js-mcp",
+  "version": "0.1.4",
+  "description": "HTTP MCP Client-Server for video enhancement API",
+  "mcpName": "io.github.z416479660/avc-test-js-mcp",
+  "main": "dist/server.js",
+  "types": "dist/server.d.ts",
+  "bin": {
+    "avc-test-js-mcp": "./dist/server.js"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "video",
+    "enhancement",
+    "http",
+    "client",
+    "server",
+    "claude",
+    "anthropic"
+  ],
+  "author": "Your Name <your.email@example.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/avc-test-js-mcp.git",
+    "directory": "js_client"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/avc-test-js-mcp/issues"
+  },
+  "homepage": "https://github.com/yourusername/avc-test-js-mcp#readme",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "axios": "^1.7.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
