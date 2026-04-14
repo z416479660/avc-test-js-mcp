@@ -35,13 +35,13 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/avc-test-js-mcp.git",
+    "url": "https://github.com/z416479660/avc-test-js-mcp.git",
     "directory": "js_client"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/avc-test-js-mcp/issues"
+    "url": "https://github.com/z416479660/avc-test-js-mcp/issues"
   },
-  "homepage": "https://github.com/yourusername/avc-test-js-mcp#readme",
+  "homepage": "https://github.com/z416479660/avc-test-js-mcp#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "axios": "^1.7.0",
