@@ -45,6 +45,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "axios": "^1.7.0",
+    "form-data": "^4.0.5",
     "zod": "^3.23.0"
   },
   "devDependencies": {

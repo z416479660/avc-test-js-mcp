@@ -12,6 +12,7 @@ import axios, { AxiosInstance } from 'axios';
 import * as fs from 'fs';
 import * as path from 'path';
 import { z } from 'zod';
+import FormData from 'form-data';
 
 // Tool schemas
 const CreateTaskSchema = z.object({
@@ -72,7 +73,7 @@ class VideoEnhancementMCPServer {
 
 支持两种上传方式：
 1. URL 上传：提供视频 URL
-2. 本地上传：提供本地文件路径，MCP Server 自动读取并转为 base64
+2. 本地上传：提供本地文件路径，MCP Server 自动上传到 TOS 对象存储
 
 参数说明：
 - video_source: 视频 URL 或本地文件路径
@@ -145,7 +146,7 @@ class VideoEnhancementMCPServer {
 
 支持两种上传方式：
 1. URL 上传：提供视频 URL
-2. 本地上传：提供本地文件路径，MCP Server 自动读取并转为 base64
+2. 本地上传：提供本地文件路径，MCP Server 自动上传到 TOS 对象存储
 
 参数说明：
 - video_source: 视频 URL 或本地文件路径
@@ -187,9 +188,9 @@ class VideoEnhancementMCPServer {
   }
 
   /**
-   * 读取本地文件并转为 base64
+   * 检查本地文件是否存在并符合大小限制
    */
-  private readLocalFile(filePath: string): { data: string; fileName: string } {
+  private checkLocalFile(filePath: string): { filePath: string; fileName: string } {
     // 检查文件是否存在
     if (!fs.existsSync(filePath)) {
       throw new Error(`文件不存在: ${filePath}`);
@@ -202,14 +203,83 @@ class VideoEnhancementMCPServer {
       throw new Error('文件大小超过 100MB 限制');
     }
 
-    // 读取并编码
-    const fileData = fs.readFileSync(filePath);
-    const base64Data = fileData.toString('base64');
-
     return {
-      data: base64Data,
+      filePath,
       fileName: path.basename(filePath),
     };
+  }
+
+  /**
+   * 获取 TOS 预签名上传凭证
+   */
+  private async getTosSignature(fileName: string): Promise<any> {
+    const response = await this.client.post('/api/v3/contents/generations/tos-signature', {
+      file_type: 'video',
+      file_name: fileName,
+    });
+    const data = response.data;
+
+    if (data.code !== 0 && data.code !== 200) {
+      throw new Error(data.message || '获取 TOS 签名失败');
+    }
+
+    return data.data;
+  }
+
+  /**
+   * 上传文件到 TOS（使用 axios + form-data，避免 Node.js fetch 流问题）
+   */
+  private async uploadToTos(filePath: string, signatureData: any): Promise<void> {
+    const formData = new FormData();
+
+    // TOS 要求必须有 key 字段（对象键）
+    const objectKey = new URL(signatureData.url).pathname.slice(1);
+    formData.append('key', objectKey);
+
+    // 后端返回的字段名去掉了 x-tos- 前缀，但 TOS policy 里用的是带前缀的，需要映射回来
+    const fieldMapping: Record<string, string> = {
+      algorithm: 'x-tos-algorithm',
+      credential: 'x-tos-credential',
+      date: 'x-tos-date',
+      signature: 'x-tos-signature',
+    };
+
+    for (const [key, value] of Object.entries(signatureData)) {
+      if (key === 'url' || key === 'origin_policy') continue;
+      const formKey = fieldMapping[key] || key;
+      formData.append(formKey, String(value));
+    }
+
+    const fileName = path.basename(filePath);
+    formData.append('file', fs.createReadStream(filePath), fileName);
+
+    const response = await axios.post(signatureData.url, formData, {
+      headers: formData.getHeaders(),
+      maxBodyLength: Infinity,
+      maxContentLength: Infinity,
+    });
+
+    if (response.status >= 400) {
+      const debugInfo = JSON.stringify({
+        status: response.status,
+        statusText: response.statusText,
+        data: response.data,
+        url: signatureData.url,
+        signatureFields: Object.keys(signatureData),
+        fileName,
+        fileSize: fs.statSync(filePath).size,
+      }, null, 2);
+      throw new Error(`TOS 上传失败: ${response.status} ${response.statusText}\n调试信息: ${debugInfo}`);
+    }
+  }
+
+  /**
+   * 从预签名 URL 中解析 file_id
+   */
+  private parseFileIdFromUrl(url: string): string {
+    const pathname = new URL(url).pathname;
+    const segments = pathname.split('/');
+    return segments.pop() || '';
   }
 
   private async createTask(
@@ -220,11 +290,14 @@ class VideoEnhancementMCPServer {
     let contentItem: any;
 
     if (sourceType === 'local') {
-      // 本地上传：读取文件转 base64
-      const fileInfo = this.readLocalFile(videoSource);
+      // 本地上传：检查文件、获取 TOS 签名、直传文件
+      const fileInfo = this.checkLocalFile(videoSource);
+      const signatureData = await this.getTosSignature(fileInfo.fileName);
+      await this.uploadToTos(videoSource, signatureData);
+      const fileId = this.parseFileIdFromUrl(signatureData.url);
       contentItem = {
         type: 'video_file',
-        file_data: fileInfo.data,
+        file_id: fileId,
         file_name: fileInfo.fileName,
       };
     } else {
