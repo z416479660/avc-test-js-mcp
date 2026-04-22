@@ -91,7 +91,8 @@ async function main() {
 
   console.log('添加签名字段到 FormData:');
   // TOS 要求必须有 key 字段（对象键）
-  const objectKey = new URL(signatureData.url).pathname.slice(1);
+  // URL pathname 中的中文会被编码，需要 decodeURIComponent 还原
+  const objectKey = decodeURIComponent(new URL(signatureData.url).pathname.slice(1));
   console.log(`  key: ${objectKey}`);
   formData.append('key', objectKey);
 

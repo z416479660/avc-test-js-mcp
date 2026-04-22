@@ -233,7 +233,8 @@ class VideoEnhancementMCPServer {
     const formData = new FormData();
 
     // TOS 要求必须有 key 字段（对象键）
-    const objectKey = new URL(signatureData.url).pathname.slice(1);
+    // URL pathname 中的中文会被编码，需要 decodeURIComponent 还原
+    const objectKey = decodeURIComponent(new URL(signatureData.url).pathname.slice(1));
     formData.append('key', objectKey);
 
     // 后端返回的字段名去掉了 x-tos- 前缀，但 TOS policy 里用的是带前缀的，需要映射回来
