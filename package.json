@@ -11,6 +11,7 @@
   },
   "files": [
     "dist",
+    "config.json",
     "LICENSE",
     "README.md"
   ],

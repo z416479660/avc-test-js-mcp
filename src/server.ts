@@ -11,6 +11,23 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import axios, { AxiosInstance } from 'axios';
 import * as fs from 'fs';
 import * as path from 'path';
+
+function loadConfig(): { baseUrl: string } {
+  const configPaths = [
+    path.resolve(process.cwd(), 'config.json'),
+    path.resolve(__dirname, '..', 'config.json'),
+  ];
+  for (const configPath of configPaths) {
+    if (fs.existsSync(configPath)) {
+      try {
+        return JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+      } catch {
+        continue;
+      }
+    }
+  }
+  return { baseUrl: 'https://mcp.luluhero.com' };
+}
 import { z } from 'zod';
 import FormData from 'form-data';
 
@@ -405,7 +422,8 @@ class VideoEnhancementMCPServer {
 // 主入口
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
-  let baseUrl = process.env.HTTP_API_BASE_URL || 'https://mcp.luluhero.com';
+  const config = loadConfig();
+  let baseUrl = process.env.HTTP_API_BASE_URL || config.baseUrl;
   let apiKey = process.env.HTTP_API_KEY || '';
 
   // 解析命令行参数
