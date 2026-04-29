@@ -14,8 +14,7 @@
     "config.json",
     "LICENSE",
     "README.md",
-    "README_EN.md",
-    "INSTALL_PROMPT.md"
+    "README_EN.md"
   ],
   "scripts": {
     "build": "tsc",

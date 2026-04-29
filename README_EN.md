@@ -1,8 +1,8 @@
 # avc-test-js-mcp (Node.js)
 
-[中文](README.md) | English
+[中文](https://github.com/z416479660/avc-test-js-mcp/blob/main/README.md) | English
 
-[![npm version](https://badge.fury.io/js/avc-test-js-mcp.svg)](https://www.npmjs.com/package/avc-test-js-mcp)
+[![npm version](https://img.shields.io/npm/v/avc-test-js-mcp)](https://www.npmjs.com/package/avc-test-js-mcp)
 [![Node.js >=18](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -22,7 +22,17 @@ Provides the following MCP Tools:
 
 ## Lazy Install (Recommended)
 
-Don't want to manually edit config files? Copy the content from [INSTALL_PROMPT.md](INSTALL_PROMPT.md) and send it to your AI assistant. It will automatically handle the entire installation for you.
+If your AI Agent has a known MCP config path, just copy the line below and send it to your AI:
+
+```
+Install the npm package avc-test-js-mcp as an MCP server. My API Key is: sk-xxxxxxxx.
+```
+
+The AI will automatically:
+1. Detect your MCP client
+2. Find the config file path
+3. Write the correct configuration
+4. Prompt you to restart the client
 
 ## Manual Install
 
@@ -62,39 +72,9 @@ Paste this (replace `your-api-key`):
 
 Save and run `/mcp` to verify it's loaded.
 
-### 2. Claude Desktop
+### 2. Cursor
 
-**macOS:**
-```bash
-nano ~/Library/Application\ Support/Claude/claude_desktop_config.json
-```
-
-**Windows:**
-```powershell
-notepad $env:AppData\Claude\claude_desktop_config.json
-```
-
-Paste this (replace `your-api-key`):
-
-```json
-{
-  "mcpServers": {
-    "video-enhancement": {
-      "command": "npx",
-      "args": ["-y", "avc-test-js-mcp@latest"],
-      "env": {
-        "HTTP_API_KEY": "your-api-key"
-      }
-    }
-  }
-}
-```
-
-Save and **fully restart** Claude Desktop.
-
-### 3. Cursor
-
-Go to **Settings > MCP Servers > Add New MCP Server**:
+Go to **Settings > Tools & MCPs > Add New MCP Server**:
 
 - **Name**: `video-enhancement`
 - **Type**: `command`
@@ -119,45 +99,12 @@ Or edit `~/.cursor/mcp.json`:
 }
 ```
 
-### 4. Cline (VS Code Extension)
-
-Open Cline settings > MCP Servers, add:
-
-```json
-{
-  "mcpServers": [
-    {
-      "name": "video-enhancement",
-      "command": "npx",
-      "args": ["-y", "avc-test-js-mcp@latest"],
-      "env": {
-        "HTTP_API_KEY": "your-api-key"
-      }
-    }
-  ]
-}
-```
-
-### 5. Other MCP Clients (Generic stdio)
-
-```bash
-npx -y avc-test-js-mcp@latest --api-key your-api-key
-```
-
-Or with environment variables:
-
-```bash
-export HTTP_API_KEY=your-api-key
-npx -y avc-test-js-mcp@latest
-```
-
 ## Verify Installation
 
 After restarting your client, check if the tools are available:
 
-1. Look for the 🔨 hammer icon in Claude Desktop (bottom right of input box)
-2. Or ask: "What tools do you have available?"
-3. You should see: `create_task`, `get_task_status`, `enhance_video_sync`
+1. Or ask: "What tools do you have available?"
+2. You should see: `create_task`, `get_task_status`, `enhance_video_sync`
 
 ## Configuration Options
 
@@ -281,16 +228,6 @@ npm install -g avc-test-js-mcp
 ```
 
 Then use `"command": "avc-test-js-mcp"` with `"args": ["--api-key", "your-api-key"]` in your config.
-
-## Development
-
-```bash
-git clone https://github.com/z416479660/avc-test-js-mcp.git
-cd js_client
-npm install
-npm run build
-npm run dev
-```
 
 ## License
 

@@ -1,8 +1,8 @@
 # avc-test-js-mcp (Node.js)
 
-中文 | [English](README_EN.md)
+中文 | [English](https://github.com/z416479660/avc-test-js-mcp/blob/main/README_EN.md)
 
-[![npm version](https://badge.fury.io/js/avc-test-js-mcp.svg)](https://www.npmjs.com/package/avc-test-js-mcp)
+[![npm version](https://img.shields.io/npm/v/avc-test-js-mcp)](https://www.npmjs.com/package/avc-test-js-mcp)
 [![Node.js >=18](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -22,7 +22,17 @@
 
 ## 懒人安装（推荐）
 
-不想手动改配置文件？直接复制 [INSTALL_PROMPT.md](INSTALL_PROMPT.md) 里的内容发给 AI 助手，它会自动帮你完成全部安装配置。
+如果你使用的 AI Agent 有确定的 MCP 配置路径，直接复制下面这句发给 AI：
+
+```
+帮我安装 npm 包 avc-test-js-mcp 作为 MCP server。我的 API Key 是：sk-xxxxxxxx。
+```
+
+AI 会自动完成：
+1. 检测你使用的 MCP 客户端
+2. 找到配置文件路径
+3. 写入正确的配置
+4. 提示你重启客户端
 
 ## 手动安装
 
@@ -62,39 +72,9 @@
 
 保存后运行 `/mcp` 验证是否加载成功。
 
-### 2. Claude Desktop
+### 2. Cursor
 
-**macOS：**
-```bash
-nano ~/Library/Application\ Support/Claude/claude_desktop_config.json
-```
-
-**Windows：**
-```powershell
-notepad $env:AppData\Claude\claude_desktop_config.json
-```
-
-粘贴以下内容（将 `your-api-key` 替换为实际 API Key）：
-
-```json
-{
-  "mcpServers": {
-    "video-enhancement": {
-      "command": "npx",
-      "args": ["-y", "avc-test-js-mcp@latest"],
-      "env": {
-        "HTTP_API_KEY": "your-api-key"
-      }
-    }
-  }
-}
-```
-
-保存后**完全重启** Claude Desktop。
-
-### 3. Cursor
-
-进入 **设置 > MCP Servers > Add New MCP Server**：
+进入 **设置 > Tools & MCPs > Add New MCP Server**：
 
 - **Name**：`video-enhancement`
 - **Type**：`command`
@@ -119,45 +99,12 @@ notepad $env:AppData\Claude\claude_desktop_config.json
 }
 ```
 
-### 4. Cline (VS Code 插件)
-
-在 Cline 设置 > MCP Servers 中添加：
-
-```json
-{
-  "mcpServers": [
-    {
-      "name": "video-enhancement",
-      "command": "npx",
-      "args": ["-y", "avc-test-js-mcp@latest"],
-      "env": {
-        "HTTP_API_KEY": "your-api-key"
-      }
-    }
-  ]
-}
-```
-
-### 5. 其他 MCP 客户端（通用 stdio）
-
-```bash
-npx -y avc-test-js-mcp@latest --api-key your-api-key
-```
-
-或使用环境变量：
-
-```bash
-export HTTP_API_KEY=your-api-key
-npx -y avc-test-js-mcp@latest
-```
-
 ## 验证安装
 
 重启客户端后，确认工具是否加载成功：
 
-1. Claude Desktop 输入框右下角查看是否有 🔨 锤子图标
-2. 或直接问 AI："你有哪些可用的工具？"
-3. 应看到：`create_task`、`get_task_status`、`enhance_video_sync`
+1. 或直接问 AI："你有哪些可用的工具？"
+2. 应看到：`create_task`、`get_task_status`、`enhance_video_sync`
 
 ## 配置项
 
@@ -280,17 +227,7 @@ API Key 缺失，请检查配置中的 `env.HTTP_API_KEY`。
 npm install -g avc-test-js-mcp
 ```
 
-然后在配置中使用 `"command": "avc-test-js-mcp"` 配合 `"args": ["--api-key", "your-api-key"]`。
-
-## 开发
-
-```bash
-git clone https://github.com/z416479660/avc-test-js-mcp.git
-cd js_client
-npm install
-npm run build
-npm run dev
-```
+然后在配置中使用 `"command": "avc-test-js-mcp"` 配合 `"args": ["--api-key", "your-api-key"]` 。
 
 ## License
 
