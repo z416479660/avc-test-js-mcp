@@ -20,7 +20,11 @@ Provides the following MCP Tools:
 - **Node.js >= 18** (check: `node --version`)
 - **API Key** (required for authentication)
 
-## Quick Start
+## Lazy Install (Recommended)
+
+Don't want to manually edit config files? Copy the content from [INSTALL_PROMPT.md](INSTALL_PROMPT.md) and send it to your AI assistant. It will automatically handle the entire installation for you.
+
+## Manual Install
 
 No installation needed. Use `npx` directly in your MCP client config.
 
