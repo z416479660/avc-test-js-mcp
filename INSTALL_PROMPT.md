@@ -1,8 +1,48 @@
 # 一键安装 Prompt
 
-## 方案一：极简一句话（推荐）
+## 方案一：Claude Code（CLI）
 
-如果你使用的 AI 支持文件编辑（如 Cursor Agent、Cline、Claude Code），直接复制下面这句发给 AI：
+Claude Code 的 MCP 配置文件位置不固定，**不要假设路径**。请复制下面的完整提示词发给 Claude Code：
+
+````
+请帮我安装 MCP server `avc-test-js-mcp`。
+
+我的 API Key 是：`sk-xxxxxxxx`
+
+**重要：请按以下步骤操作，不要假设配置文件位置：**
+
+1. 先运行 `/mcp` 命令，查看输出中 "User MCPs" 后面显示的是哪个配置文件路径
+2. 读取那个文件，确认格式
+3. 把新 server 配置写入同一个文件
+4. 写入后运行 `/mcp` 验证是否成功加载
+
+如果 `/mcp` 命令不可用，请读取以下可能的配置文件，按优先级检查：
+- Windows: `%USERPROFILE%\.claude.json`
+- macOS: `~/.claude.json`
+- Linux: `~/.claude.json`
+- 或者: `~/.claude/mcp.json`（旧版/备用）
+
+要写入的配置内容：
+```json
+{
+  "mcpServers": {
+    "video-enhancement": {
+      "command": "npx",
+      "args": ["-y", "avc-test-js-mcp@latest"],
+      "env": {
+        "HTTP_API_KEY": "sk-xxxxxxxx"
+      }
+    }
+  }
+}
+```
+````
+
+---
+
+## 方案二：Cursor / Cline / 其他 AI Agent
+
+如果你使用的 AI Agent 有确定的 MCP 配置路径（如 Cursor、Cline），直接复制下面这句发给 AI：
 
 ```
 帮我安装 npm 包 avc-test-js-mcp 作为 MCP server。我的 API Key 是：sk-xxxxxxxx。
@@ -16,7 +56,7 @@ AI 会自动完成：
 
 ---
 
-## 方案二：发给 Claude Desktop / 无工具 AI
+## 方案三：发给 Claude Desktop / 无工具 AI
 
 如果你的 AI **不能**直接操作文件，复制下面的完整指令：
 

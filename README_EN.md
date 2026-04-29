@@ -28,7 +28,41 @@ Don't want to manually edit config files? Copy the content from [INSTALL_PROMPT.
 
 No installation needed. Use `npx` directly in your MCP client config.
 
-### 1. Claude Desktop
+### 1. Claude Code (CLI)
+
+Run in Claude Code:
+
+```
+/mcp
+```
+
+Check the output for the **"User MCPs"** section to find the config file path, then edit that file.
+
+Common paths (if `/mcp` is unavailable):
+- **Windows**: `%USERPROFILE%\.claude.json`
+- **macOS**: `~/.claude.json`
+- **Linux**: `~/.claude.json`
+- **Legacy/Alternative**: `~/.claude/mcp.json`
+
+Paste this (replace `your-api-key`):
+
+```json
+{
+  "mcpServers": {
+    "video-enhancement": {
+      "command": "npx",
+      "args": ["-y", "avc-test-js-mcp@latest"],
+      "env": {
+        "HTTP_API_KEY": "your-api-key"
+      }
+    }
+  }
+}
+```
+
+Save and run `/mcp` to verify it's loaded.
+
+### 2. Claude Desktop
 
 **macOS:**
 ```bash
@@ -58,7 +92,7 @@ Paste this (replace `your-api-key`):
 
 Save and **fully restart** Claude Desktop.
 
-### 2. Cursor
+### 3. Cursor
 
 Go to **Settings > MCP Servers > Add New MCP Server**:
 
@@ -85,7 +119,7 @@ Or edit `~/.cursor/mcp.json`:
 }
 ```
 
-### 3. Cline (VS Code Extension)
+### 4. Cline (VS Code Extension)
 
 Open Cline settings > MCP Servers, add:
 
@@ -104,7 +138,7 @@ Open Cline settings > MCP Servers, add:
 }
 ```
 
-### 4. Other MCP Clients (Generic stdio)
+### 5. Other MCP Clients (Generic stdio)
 
 ```bash
 npx -y avc-test-js-mcp@latest --api-key your-api-key

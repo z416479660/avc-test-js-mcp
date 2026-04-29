@@ -28,7 +28,41 @@
 
 无需安装，直接在 MCP 客户端配置中使用 `npx` 运行。
 
-### 1. Claude Desktop
+### 1. Claude Code（CLI）
+
+在 Claude Code 中运行：
+
+```
+/mcp
+```
+
+查看输出中 **"User MCPs"** 对应的配置文件路径，然后编辑该文件。
+
+常见路径（如果 `/mcp` 不可用）：
+- **Windows**: `%USERPROFILE%\.claude.json`
+- **macOS**: `~/.claude.json`
+- **Linux**: `~/.claude.json`
+- **旧版/备用**: `~/.claude/mcp.json`
+
+粘贴以下内容（将 `your-api-key` 替换为实际 API Key）：
+
+```json
+{
+  "mcpServers": {
+    "video-enhancement": {
+      "command": "npx",
+      "args": ["-y", "avc-test-js-mcp@latest"],
+      "env": {
+        "HTTP_API_KEY": "your-api-key"
+      }
+    }
+  }
+}
+```
+
+保存后运行 `/mcp` 验证是否加载成功。
+
+### 2. Claude Desktop
 
 **macOS：**
 ```bash
@@ -58,7 +92,7 @@ notepad $env:AppData\Claude\claude_desktop_config.json
 
 保存后**完全重启** Claude Desktop。
 
-### 2. Cursor
+### 3. Cursor
 
 进入 **设置 > MCP Servers > Add New MCP Server**：
 
@@ -85,7 +119,7 @@ notepad $env:AppData\Claude\claude_desktop_config.json
 }
 ```
 
-### 3. Cline (VS Code 插件)
+### 4. Cline (VS Code 插件)
 
 在 Cline 设置 > MCP Servers 中添加：
 
@@ -104,7 +138,7 @@ notepad $env:AppData\Claude\claude_desktop_config.json
 }
 ```
 
-### 4. 其他 MCP 客户端（通用 stdio）
+### 5. 其他 MCP 客户端（通用 stdio）
 
 ```bash
 npx -y avc-test-js-mcp@latest --api-key your-api-key
