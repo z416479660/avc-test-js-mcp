@@ -1,13 +1,13 @@
 {
   "type": "module",
   "name": "avc-test-js-mcp",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "HTTP MCP Client-Server for video enhancement API",
   "mcpName": "io.github.z416479660/avc-test-py-mcp",
   "main": "dist/server.js",
   "types": "dist/server.d.ts",
   "bin": {
-    "avc-test-js-mcp": "./dist/server.js"
+    "avc-test-js-mcp": "dist/server.js"
   },
   "files": [
     "dist",
@@ -38,7 +38,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/z416479660/avc-test-js-mcp.git"
+    "url": "git+https://github.com/z416479660/avc-test-js-mcp.git"
   },
   "bugs": {
     "url": "https://github.com/z416479660/avc-test-js-mcp/issues"
@@ -56,7 +56,10 @@
   },
   "mcpServer": {
     "command": "npx",
-    "args": ["-y", "avc-test-js-mcp@latest"],
+    "args": [
+      "-y",
+      "avc-test-js-mcp@latest"
+    ],
     "env": {
       "HTTP_API_KEY": "${API_KEY}",
       "HTTP_API_BASE_URL": "https://mcp.luluhero.com"
