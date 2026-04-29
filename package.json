@@ -53,6 +53,16 @@
     "@types/node": "^20.0.0",
     "typescript": "^5.4.0"
   },
+  "mcpServer": {
+    "command": "npx",
+    "args": ["-y", "avc-test-js-mcp@latest"],
+    "env": {
+      "HTTP_API_KEY": "${API_KEY}",
+      "HTTP_API_BASE_URL": "https://mcp.luluhero.com"
+    },
+    "description": "视频增强 MCP 服务，支持 URL 和本地文件上传",
+    "setup": "需要替换 env.HTTP_API_KEY 为你的 API Key"
+  },
   "engines": {
     "node": ">=18.0.0"
   }
