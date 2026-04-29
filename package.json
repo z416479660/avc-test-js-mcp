@@ -1,7 +1,7 @@
 {
   "type": "module",
   "name": "avc-test-js-mcp",
-  "version": "0.1.9",
+  "version": "0.2.0",
   "description": "HTTP MCP Client-Server for video enhancement API",
   "mcpName": "io.github.z416479660/avc-test-py-mcp",
   "main": "dist/server.js",
@@ -13,7 +13,9 @@
     "dist",
     "config.json",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "README_EN.md",
+    "INSTALL_PROMPT.md"
   ],
   "scripts": {
     "build": "tsc",
@@ -36,8 +38,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/z416479660/avc-test-js-mcp.git",
-    "directory": "js_client"
+    "url": "https://github.com/z416479660/avc-test-js-mcp.git"
   },
   "bugs": {
     "url": "https://github.com/z416479660/avc-test-js-mcp/issues"
