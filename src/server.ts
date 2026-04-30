@@ -365,6 +365,8 @@ class VideoEnhancementMCPServer {
       status: result.status,
       progress: result.progress || 0,
       video_url: result.video_url,
+      debug_video_url_length: result.video_url?.length,
+      debug_video_url_full: result.video_url,
       error_message: result.error_message,
       created_at: result.created_at,
       updated_at: result.updated_at,

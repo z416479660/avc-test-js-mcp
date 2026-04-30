@@ -1,7 +1,7 @@
 {
   "type": "module",
   "name": "avc-test-js-mcp",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "HTTP MCP Client-Server for video enhancement API",
   "mcpName": "io.github.z416479660/avc-test-py-mcp",
   "main": "dist/server.js",

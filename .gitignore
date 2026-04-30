@@ -10,3 +10,4 @@ coverage/
 *.tgz
 .mcpregister_github_token
 test
+scripts/
