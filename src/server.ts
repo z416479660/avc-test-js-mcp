@@ -301,7 +301,7 @@ class VideoEnhancementMCPServer {
   private parseFileIdFromUrl(url: string): string {
     const pathname = new URL(url).pathname;
     const segments = pathname.split('/');
-    return segments.pop() || '';
+    return decodeURIComponent(segments.pop() || '');
   }
 
   private async createTask(
