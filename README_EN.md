@@ -203,14 +203,91 @@ Synchronously enhance video (blocks until completion).
 
 Analyze an image using the SAM3 segmentation API to generate inference results (masks, boxes, scores).
 
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `imagePath` | string | No (choose one) | Absolute path of a local image file |
-| `imageUrl` | string | No (choose one) | Publicly accessible image URL |
-| `imageBase64` | string | No (choose one) | Base64-encoded image data |
-| `prompt` | string | **Yes** | English prompt for image segmentation |
+**Parameters:**
 
-**You must provide exactly one of the three image input methods.**
+Image input (choose one, must provide exactly one):
+
+- `imagePath` (string): Absolute path of a local image file. Supports common formats (PNG, JPG, JPEG, BMP, WebP).
+  - Example: `"C:\\Users\\xxx\\photo.png"`, `"/home/user/images/cat.jpg"`
+  - Use when: The user explicitly provides a local file path
+
+- `imageUrl` (string): Publicly accessible URL of the image.
+  - Example: `"https://example.com/photo.jpg"`
+  - Use when: The image is already online and the user provides a link
+  - Note: The URL must be publicly accessible. Links requiring login or signatures are not supported
+
+- `imageBase64` (string): Base64-encoded image data.
+  - Example: `"iVBORw0KGgoAAAANSUhEUgAA..."`
+  - Use when: The user drags or uploads an image attachment, and the Agent encodes it as base64
+  - Note: Large images will produce very large base64 strings, which may slow transmission
+
+Other parameters:
+
+- `prompt` (string, required): English text prompt specifying the target object to segment. Examples: `"person"`, `"car"`, `"a cat sitting on a sofa"`. Since the SAM3 model only accepts English prompts, provide an English description. If the user provides Chinese or other non-English text, the Agent will automatically translate it before calling the tool.
+
+**Returns:**
+
+After inference completes, returns a JSON string containing three fields:
+
+- **`masks`**: 2D array. Each element is a binary mask (values 0 or 1) with the same dimensions as the input image, marking the pixel-level location of detected objects. The i-th mask corresponds to the i-th detected object instance.
+- **`boxes`**: 2D array. Each element is a bounding box in `[x1, y1, x2, y2]` format, representing the rectangular region of the detected object. `x1`, `y1` are the top-left coordinates; `x2`, `y2` are the bottom-right coordinates.
+
+  Coordinate system: The top-left corner of the image is the origin `(0, 0)`. The x-axis increases to the right, and the y-axis increases downward, in pixels. For example, `[120, 80, 300, 450]` means the region starts 120px from the left edge and 80px from the top edge, extending to 300px from the left and 450px from the top. Width = `x2 - x1 = 180px`, Height = `y2 - y1 = 370px`.
+- **`scores`**: 1D array. Each element is a confidence score for the corresponding detection result, ranging from 0 to 1. Higher scores indicate greater model confidence.
+
+Example result JSON:
+
+```json
+{
+  "masks": [
+    [[0, 0, 1, ...], [0, 1, 1, ...], ...],
+    [[0, 0, 0, ...], [0, 0, 1, ...], ...]
+  ],
+  "boxes": [
+    [120, 80, 300, 450],
+    [400, 200, 600, 500]
+  ],
+  "scores": [0.95, 0.87]
+}
+```
+
+## FAQ
+
+### Drag-and-drop attachment says file not found?
+
+This is a known limitation of stdio MCP. When dragging or uploading an attachment through the Agent interface, the file path is usually not automatically passed to the MCP Server.
+
+**Solutions:**
+
+1. **Provide the path simultaneously** (recommended): After dragging the image,补充 the local absolute path in your message:
+   > "Please analyze this image `D:\\photos\\cat.jpg` and find the cat"
+
+2. **Wait for auto-encoding**: Claude may automatically encode the image as base64. If successful, no extra action is needed.
+
+3. **Reply to path inquiry**: If Claude asks for the image path, simply reply with the local absolute path.
+
+### Is there a priority among the three input methods?
+
+There is no strict priority. Claude will automatically choose the most appropriate method based on conversation context:
+
+- You provided a local path → uses `imagePath`
+- You provided a web link → uses `imageUrl`
+- You dragged an attachment without a path → tries `imageBase64`
+
+### What image formats are supported?
+
+Common formats: PNG, JPG, JPEG, BMP, WebP, etc. PNG or JPG is recommended.
+
+### What if URL image download fails?
+
+Ensure the URL is **publicly accessible**, requiring no login, cookies, or signatures. If the image is on a service requiring authentication (e.g., private S3 Bucket, login-required image host), download it locally first and use `imagePath`.
+
+### What if the base64 image is too large?
+
+If the image is very large (e.g., 4K resolution), the base64-encoded data will be very large and may slow transmission. Suggestions:
+
+1. Use `imagePath` instead
+2. Or compress the image before encoding
 
 ## File Upload Notes
 
