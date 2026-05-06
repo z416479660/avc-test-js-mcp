@@ -6,7 +6,7 @@
 [![Node.js >=18](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-基于 MCP 协议的视频增强服务，作为 MCP Client-Server 与 FastAPI HTTP Server 交互。
+基于 MCP 协议的视频增强与图像分割服务，作为 MCP Client-Server 与后端 HTTP Server 交互。
 
 ## 功能
 
@@ -14,6 +14,7 @@
 - `create_task` - 创建视频增强任务（支持 URL 或本地文件上传）
 - `get_task_status` - 查询任务状态
 - `enhance_video_sync` - 同步增强视频（阻塞等待完成）
+- `sam3_predict` - SAM3 图像分割（支持本地路径、URL 或 Base64 图片）
 
 ## 前置要求
 
@@ -63,7 +64,7 @@ AI 会自动完成：
       "command": "npx",
       "args": ["-y", "avc-test-js-mcp@latest"],
       "env": {
-        "HTTP_API_KEY": "your-api-key"
+        "API_KEY": "your-api-key"
       }
     }
   }
@@ -92,7 +93,7 @@ AI 会自动完成：
       "command": "npx",
       "args": ["-y", "avc-test-js-mcp@latest"],
       "env": {
-        "HTTP_API_KEY": "your-api-key"
+        "API_KEY": "your-api-key"
       }
     }
   }
@@ -104,14 +105,17 @@ AI 会自动完成：
 重启客户端后，确认工具是否加载成功：
 
 1. 或直接问 AI："你有哪些可用的工具？"
-2. 应看到：`create_task`、`get_task_status`、`enhance_video_sync`
+2. 应看到：`create_task`、`get_task_status`、`enhance_video_sync`、`sam3_predict`
 
 ## 配置项
 
 | 变量名 | 必填 | 默认值 | 说明 |
 |---|---|---|---|
-| `HTTP_API_KEY` | **是** | - | API 认证密钥 |
-| `HTTP_API_BASE_URL` | 否 | `https://mcp.luluhero.com` | 服务接口地址 |
+| `API_KEY` | **是** | - | API 认证密钥（视频增强和 SAM3 共用） |
+| `HTTP_API_BASE_URL` | 否 | `https://mcp.luluhero.com` | 视频增强服务接口地址 |
+| `SAM3_API_BASE_URL` | 否 | `https://sam.luluhero.com` | SAM3 服务接口地址 |
+| `SAM3_POLL_INTERVAL` | 否 | `2000` | 轮询间隔（毫秒） |
+| `SAM3_POLL_MAX_ATTEMPTS` | 否 | `60` | 最大轮询次数 |
 
 ### 自定义服务地址
 
@@ -119,14 +123,15 @@ AI 会自动完成：
 {
   "env": {
     "HTTP_API_BASE_URL": "https://your-endpoint.com",
-    "HTTP_API_KEY": "your-api-key"
+    "API_KEY": "your-api-key",
+    "SAM3_API_BASE_URL": "http://localhost:8001"
   }
 }
 ```
 
 或通过命令行参数：
 ```bash
-npx -y avc-test-js-mcp@latest --base-url https://your-endpoint.com --api-key your-api-key
+npx -y avc-test-js-mcp@latest --base-url https://your-endpoint.com --api-key your-api-key --sam3-base-url http://localhost:8001
 ```
 
 ## 使用示例
@@ -138,6 +143,10 @@ npx -y avc-test-js-mcp@latest --base-url https://your-endpoint.com --api-key you
 > "把我桌面的 video.mp4 提升到 2k 画质"
 
 AI 会自动调用相应工具完成任务。
+
+> "帮我分析一下这张图片，找出里面的所有物体：C:\\Users\\xxx\\photo.png"
+>
+> "用 SAM3 分割这张图片，prompt 是 'find all cars'"
 
 ## 提供的 Tools
 
@@ -191,6 +200,19 @@ AI 会自动调用相应工具完成任务。
 | `poll_interval` | number | 否 | `5` | 轮询间隔（秒） |
 | `timeout` | number | 否 | `600` | 超时时间（秒） |
 
+### sam3_predict
+
+使用 SAM3 分割 API 分析图片，生成推理结果（masks、boxes、scores）。
+
+| 参数 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `imagePath` | string | 否（三选一） | 本地图片绝对路径 |
+| `imageUrl` | string | 否（三选一） | 公开可访问的图片 URL |
+| `imageBase64` | string | 否（三选一） | Base64 编码的图片数据 |
+| `prompt` | string | **是** | 英文提示词，用于图像分割 |
+
+**三种图片输入方式必须提供且仅提供一种。**
+
 ## 文件上传说明
 
 当 `type` 为 `"local"` 时，MCP Server 会：
@@ -204,9 +226,9 @@ AI 会自动调用相应工具完成任务。
 
 安装 Node.js >= 18：https://nodejs.org/
 
-### "错误: 需要提供 --api-key 或设置 HTTP_API_KEY"
+### "错误: 需要提供 --api-key 或设置 API_KEY"
 
-API Key 缺失，请检查配置中的 `env.HTTP_API_KEY`。
+API Key 缺失，请检查配置中的 `env.API_KEY`。
 
 ### MCP Server 在客户端显示红色/错误
 

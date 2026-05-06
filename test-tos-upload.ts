@@ -15,14 +15,14 @@ async function main() {
   const args = process.argv.slice(2);
   const filePath = args[0];
   const baseUrl = (args[1] || 'https://mcp.luluhero.com').replace(/\/$/, '');
-  const apiKey = args[2] || process.env.HTTP_API_KEY || '';
+  const apiKey = args[2] || process.env.API_KEY || '';
 
   if (!filePath) {
     console.error('用法: npx tsx test-tos-upload.ts <文件路径> [baseUrl] [apiKey]');
     process.exit(1);
   }
   if (!apiKey) {
-    console.error('错误: 需要提供 API Key（参数或环境变量 HTTP_API_KEY）');
+    console.error('错误: 需要提供 API Key（参数或环境变量 API_KEY）');
     process.exit(1);
   }
   if (!fs.existsSync(filePath)) {
@@ -76,7 +76,8 @@ async function main() {
   try {
     const pathname = new URL(signatureData.url).pathname;
     const segments = pathname.split('/');
-    fileId = segments.pop() || '';
+    fileId = decodeURIComponent(segments.pop() || '');
+    console.error('[DEBUG] file_id:', fileId);
     console.log(`URL: ${signatureData.url}`);
     console.log(`pathname: ${pathname}`);
     console.log(`file_id: ${fileId}`);

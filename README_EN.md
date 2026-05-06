@@ -6,7 +6,7 @@
 [![Node.js >=18](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A video enhancement service based on the MCP protocol, acting as an MCP Client-Server to interact with a FastAPI HTTP Server.
+A video enhancement and image segmentation service based on the MCP protocol, acting as an MCP Client-Server to interact with backend HTTP Servers.
 
 ## Features
 
@@ -14,6 +14,7 @@ Provides the following MCP Tools:
 - `create_task` - Create a video enhancement task (supports URL or local file upload)
 - `get_task_status` - Query task status
 - `enhance_video_sync` - Synchronously enhance video (blocking wait)
+- `sam3_predict` - SAM3 image segmentation (supports local path, URL, or Base64 image)
 
 ## Prerequisites
 
@@ -63,7 +64,7 @@ Paste this (replace `your-api-key`):
       "command": "npx",
       "args": ["-y", "avc-test-js-mcp@latest"],
       "env": {
-        "HTTP_API_KEY": "your-api-key"
+        "API_KEY": "your-api-key"
       }
     }
   }
@@ -92,7 +93,7 @@ Or edit `~/.cursor/mcp.json`:
       "command": "npx",
       "args": ["-y", "avc-test-js-mcp@latest"],
       "env": {
-        "HTTP_API_KEY": "your-api-key"
+        "API_KEY": "your-api-key"
       }
     }
   }
@@ -104,14 +105,17 @@ Or edit `~/.cursor/mcp.json`:
 After restarting your client, check if the tools are available:
 
 1. Or ask: "What tools do you have available?"
-2. You should see: `create_task`, `get_task_status`, `enhance_video_sync`
+2. You should see: `create_task`, `get_task_status`, `enhance_video_sync`, `sam3_predict`
 
 ## Configuration Options
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `HTTP_API_KEY` | **Yes** | - | API authentication key |
-| `HTTP_API_BASE_URL` | No | `https://mcp.luluhero.com` | Service endpoint |
+| `API_KEY` | **Yes** | - | API authentication key (shared by video enhancement and SAM3) |
+| `HTTP_API_BASE_URL` | No | `https://mcp.luluhero.com` | Video enhancement service endpoint |
+| `SAM3_API_BASE_URL` | No | `https://sam.luluhero.com` | SAM3 service endpoint |
+| `SAM3_POLL_INTERVAL` | No | `2000` | Polling interval (milliseconds) |
+| `SAM3_POLL_MAX_ATTEMPTS` | No | `60` | Maximum polling attempts |
 
 ### Custom Endpoint
 
@@ -126,7 +130,7 @@ After restarting your client, check if the tools are available:
 
 Or via CLI args:
 ```bash
-npx -y avc-test-js-mcp@latest --base-url https://your-endpoint.com --api-key your-api-key
+npx -y avc-test-js-mcp@latest --base-url https://your-endpoint.com --api-key your-api-key --sam3-base-url http://localhost:8001 --sam3-api-key your-sam3-key
 ```
 
 ## Usage Examples
@@ -138,6 +142,10 @@ Once configured, ask your AI agent naturally:
 > "Improve the quality of /Users/me/Desktop/video.mp4 to 2k"
 
 The agent will automatically call the appropriate tools.
+
+> "Analyze this image and find all objects: C:\Users\xxx\photo.png"
+>
+> "Use SAM3 to segment this image, prompt: 'find all cars'"
 
 ## Provided Tools
 
@@ -190,6 +198,19 @@ Synchronously enhance video (blocks until completion).
 | `resolution` | string | No | `720p` | Target resolution |
 | `poll_interval` | number | No | `5` | Poll interval (seconds) |
 | `timeout` | number | No | `600` | Timeout (seconds) |
+
+### sam3_predict
+
+Analyze an image using the SAM3 segmentation API to generate inference results (masks, boxes, scores).
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `imagePath` | string | No (choose one) | Absolute path of a local image file |
+| `imageUrl` | string | No (choose one) | Publicly accessible image URL |
+| `imageBase64` | string | No (choose one) | Base64-encoded image data |
+| `prompt` | string | **Yes** | English prompt for image segmentation |
+
+**You must provide exactly one of the three image input methods.**
 
 ## File Upload Notes
 

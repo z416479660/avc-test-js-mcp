@@ -1,9 +1,9 @@
 {
   "type": "module",
   "name": "avc-test-js-mcp",
-  "version": "0.2.6",
-  "description": "HTTP MCP Client-Server for video enhancement API",
-  "mcpName": "io.github.z416479660/avc-test-py-mcp",
+  "version": "0.3.0",
+  "description": "MCP Server for video enhancement and image segmentation (SAM3)",
+  "mcpName": "io.github.z416479660/avc-test-js-mcp",
   "main": "dist/server.js",
   "types": "dist/server.d.ts",
   "bin": {
@@ -60,11 +60,12 @@
       "avc-test-js-mcp@latest"
     ],
     "env": {
-      "HTTP_API_KEY": "${API_KEY}",
-      "HTTP_API_BASE_URL": "https://mcp.luluhero.com"
+      "API_KEY": "your-api-key",
+      "HTTP_API_BASE_URL": "https://mcp.luluhero.com",
+      "SAM3_API_BASE_URL": "https://sam.luluhero.com"
     },
-    "description": "视频增强 MCP 服务，支持 URL 和本地文件上传",
-    "setup": "需要替换 env.HTTP_API_KEY 为你的 API Key"
+    "description": "视频增强 + SAM3 图像分割 MCP 服务",
+    "setup": "需要替换 env.API_KEY 为你的 API Key"
   },
   "engines": {
     "node": ">=18.0.0"
