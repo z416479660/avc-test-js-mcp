@@ -6,10 +6,10 @@ import { z } from 'zod';
 import FormData from 'form-data';
 
 const Sam3PredictSchema = z.object({
-  imagePath: z.string().optional().describe('本地图片绝对路径（如 C:\\\\Users\\\\xxx\\\\photo.png）'),
-  imageUrl: z.string().optional().describe('公开可访问的图片URL'),
-  imageBase64: z.string().optional().describe('Base64编码的图片数据'),
-  prompt: z.string().describe('图像分割提示词，必须是英文'),
+  imagePath: z.string().optional().describe('Absolute path of a local image file (e.g. C:\\\\Users\\\\xxx\\\\photo.png)'),
+  imageUrl: z.string().url().optional().describe('Publicly accessible URL of the image to process'),
+  imageBase64: z.string().optional().describe('Base64-encoded image data. Use this when the image is provided as an attachment without a local path'),
+  prompt: z.string().describe('Text prompt for mask generation. Must be in English. If the user provides Chinese or other non-English text, translate it to English before calling this tool'),
 });
 
 export function setupSam3Tools(
@@ -35,6 +35,8 @@ The image can be provided in one of three ways:
 1. imagePath: Absolute path of a local image file (e.g. C:\\Users\\xxx\\photo.png). Use this when the user provides a local file path.
 2. imageUrl: Publicly accessible URL of the image (e.g. https://example.com/photo.jpg). Use this when the user provides a web link.
 3. imageBase64: Base64-encoded image data. Use this when the user uploads or drags-and-drops an image as an attachment and no local path is available.
+In this case, encode the image content as base64 and pass it via this parameter.
+If the user mentions an uploaded image but does not provide a path, URL, or base64 data, ask the user for the local absolute path.
 Prompt must be in English. If the user provides Chinese or other non-English text, translate it to English before calling this tool.`,
     Sam3PredictSchema.shape,
     async (args) => {
@@ -122,6 +124,10 @@ async function sam3PredictTool(
   args: z.infer<typeof Sam3PredictSchema>
 ): Promise<string> {
   const { imagePath, imageUrl, imageBase64, prompt } = args;
+
+  if (!imagePath && !imageUrl && !imageBase64) {
+    throw new Error('Missing image input: must provide one of imagePath, imageUrl, or imageBase64');
+  }
 
   if (!prompt) {
     throw new Error('Missing argument: prompt');
