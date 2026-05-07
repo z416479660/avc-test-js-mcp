@@ -24,15 +24,15 @@ function loadConfig(): { baseUrl: string; sam3BaseUrl: string } {
       try {
         const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
         return {
-          baseUrl: config.baseUrl || 'https://mcp.luluhero.com',
-          sam3BaseUrl: config.sam3BaseUrl || 'https://sam.luluhero.com',
+          baseUrl: config.baseUrl || 'https://mcp.luluhero.com/enhance',
+          sam3BaseUrl: config.sam3BaseUrl || 'https://mcp.luluhero.com/sam',
         };
       } catch {
         continue;
       }
     }
   }
-  return { baseUrl: 'https://mcp.luluhero.com', sam3BaseUrl: 'https://sam.luluhero.com' };
+  return { baseUrl: 'https://mcp.luluhero.com/enhance', sam3BaseUrl: 'https://mcp.luluhero.com/sam' };
 }
 
 // 主入口

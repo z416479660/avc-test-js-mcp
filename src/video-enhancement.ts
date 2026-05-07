@@ -7,7 +7,7 @@ import FormData from 'form-data';
 
 // Schemas
 const CreateTaskSchema = z.object({
-  video_source: z.string().describe('视频URL地址或本地文件路径'),
+  video_source: z.string().describe('视频URL地址或本地文件路径（URL必须公网可访问，不支持需要登录或签名的链接）'),
   type: z.enum(['url', 'local']).default('url').describe('上传类型：url=网络视频，local=本地文件'),
   resolution: z.enum(['480p', '540p', '720p', '1080p', '2k']).default('720p').describe('目标分辨率，默认720p'),
 });
@@ -17,7 +17,7 @@ const GetTaskStatusSchema = z.object({
 });
 
 const EnhanceVideoSyncSchema = z.object({
-  video_source: z.string().describe('视频URL地址或本地文件路径'),
+  video_source: z.string().describe('视频URL地址或本地文件路径（URL必须公网可访问，不支持需要登录或签名的链接）'),
   type: z.enum(['url', 'local']).default('url').describe('上传类型：url=网络视频，local=本地文件'),
   resolution: z.enum(['480p', '540p', '720p', '1080p', '2k']).default('720p').describe('目标分辨率，默认720p'),
   poll_interval: z.number().default(5).describe('轮询间隔（秒），默认5'),

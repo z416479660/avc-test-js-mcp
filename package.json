@@ -1,7 +1,7 @@
 {
   "type": "module",
   "name": "avc-test-js-mcp",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "MCP Server for video enhancement and image segmentation (SAM3)",
   "mcpName": "io.github.z416479660/avc-test-js-mcp",
   "main": "dist/server.js",
@@ -61,8 +61,8 @@
     ],
     "env": {
       "API_KEY": "your-api-key",
-      "HTTP_API_BASE_URL": "https://mcp.luluhero.com",
-      "SAM3_API_BASE_URL": "https://sam.luluhero.com"
+      "HTTP_API_BASE_URL": "https://mcp.luluhero.com/enhance",
+      "SAM3_API_BASE_URL": "https://mcp.luluhero.com/sam"
     },
     "description": "视频增强 + SAM3 图像分割 MCP 服务",
     "setup": "需要替换 env.API_KEY 为你的 API Key"

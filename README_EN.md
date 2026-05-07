@@ -112,8 +112,8 @@ After restarting your client, check if the tools are available:
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `API_KEY` | **Yes** | - | API authentication key (shared by video enhancement and SAM3) |
-| `HTTP_API_BASE_URL` | No | `https://mcp.luluhero.com` | Video enhancement service endpoint |
-| `SAM3_API_BASE_URL` | No | `https://sam.luluhero.com` | SAM3 service endpoint |
+| `HTTP_API_BASE_URL` | No | `https://mcp.luluhero.com/enhance` | Video enhancement service endpoint |
+| `SAM3_API_BASE_URL` | No | `https://mcp.luluhero.com/sam` | SAM3 service endpoint |
 | `SAM3_POLL_INTERVAL` | No | `2000` | Polling interval (milliseconds) |
 | `SAM3_POLL_MAX_ATTEMPTS` | No | `60` | Maximum polling attempts |
 
@@ -155,7 +155,7 @@ Create an asynchronous video enhancement task.
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `video_source` | string | Yes | - | Video URL or local file path |
+| `video_source` | string | Yes | - | Video URL or local file path (URL must be publicly accessible, links requiring login or signatures are not supported) |
 | `type` | string | No | `url` | `url` or `local` |
 | `resolution` | string | No | `720p` | `480p`, `540p`, `720p`, `1080p`, `2k` |
 
@@ -193,7 +193,7 @@ Synchronously enhance video (blocks until completion).
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `video_source` | string | Yes | - | Video URL or local file path |
+| `video_source` | string | Yes | - | Video URL or local file path (URL must be publicly accessible, links requiring login or signatures are not supported) |
 | `type` | string | No | `url` | `url` or `local` |
 | `resolution` | string | No | `720p` | Target resolution |
 | `poll_interval` | number | No | `5` | Poll interval (seconds) |

@@ -112,8 +112,8 @@ AI 会自动完成：
 | 变量名 | 必填 | 默认值 | 说明 |
 |---|---|---|---|
 | `API_KEY` | **是** | - | API 认证密钥（视频增强和 SAM3 共用） |
-| `HTTP_API_BASE_URL` | 否 | `https://mcp.luluhero.com` | 视频增强服务接口地址 |
-| `SAM3_API_BASE_URL` | 否 | `https://sam.luluhero.com` | SAM3 服务接口地址 |
+| `HTTP_API_BASE_URL` | 否 | `https://mcp.luluhero.com/enhance` | 视频增强服务接口地址 |
+| `SAM3_API_BASE_URL` | 否 | `https://mcp.luluhero.com/sam` | SAM3 服务接口地址 |
 | `SAM3_POLL_INTERVAL` | 否 | `2000` | 轮询间隔（毫秒） |
 | `SAM3_POLL_MAX_ATTEMPTS` | 否 | `60` | 最大轮询次数 |
 
@@ -156,7 +156,7 @@ AI 会自动调用相应工具完成任务。
 
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 |---|---|---|---|---|
-| `video_source` | string | 是 | - | 视频 URL 或本地文件路径 |
+| `video_source` | string | 是 | - | 视频 URL 或本地文件路径（URL 必须公网可访问，不支持需要登录或签名的链接） |
 | `type` | string | 否 | `url` | `url` 或 `local` |
 | `resolution` | string | 否 | `720p` | `480p`、`540p`、`720p`、`1080p`、`2k` |
 
@@ -194,7 +194,7 @@ AI 会自动调用相应工具完成任务。
 
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 |---|---|---|---|---|
-| `video_source` | string | 是 | - | 视频 URL 或本地文件路径 |
+| `video_source` | string | 是 | - | 视频 URL 或本地文件路径（URL 必须公网可访问，不支持需要登录或签名的链接） |
 | `type` | string | 否 | `url` | `url` 或 `local` |
 | `resolution` | string | 否 | `720p` | 目标分辨率 |
 | `poll_interval` | number | 否 | `5` | 轮询间隔（秒） |

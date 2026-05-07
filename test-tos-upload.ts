@@ -8,13 +8,13 @@ import FormData from 'form-data';
  * 用法：npx tsx test-tos-upload.ts <文件路径> [baseUrl] [apiKey]
  *
  * 示例：
- *   npx tsx test-tos-upload.ts D:\video\8.mp4 https://mcp.luluhero.com YOUR_API_KEY
+ *   npx tsx test-tos-upload.ts D:\video\8.mp4 https://mcp.luluhero.com/enhance YOUR_API_KEY
  */
 
 async function main() {
   const args = process.argv.slice(2);
   const filePath = args[0];
-  const baseUrl = (args[1] || 'https://mcp.luluhero.com').replace(/\/$/, '');
+  const baseUrl = (args[1] || 'https://mcp.luluhero.com/enhance').replace(/\/$/, '');
   const apiKey = args[2] || process.env.API_KEY || '';
 
   if (!filePath) {
