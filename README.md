@@ -85,7 +85,7 @@ AI 会自动完成：
 - **Type**：`command`
 - **Command**：
   ```bash
-  env HTTP_API_KEY=your-api-key npx -y avc-test-js-mcp@latest
+  env API_KEY=your-api-key npx -y avc-test-js-mcp@latest
   ```
 
 或编辑 `~/.cursor/mcp.json`：
@@ -128,14 +128,14 @@ AI 会自动完成：
   "env": {
     "HTTP_API_BASE_URL": "https://your-endpoint.com",
     "API_KEY": "your-api-key",
-    "SAM3_API_BASE_URL": "http://localhost:8001"
+    "SAM3_API_BASE_URL": "https://your-sam3-endpoint.com"
   }
 }
 ```
 
 或通过命令行参数：
 ```bash
-npx -y avc-test-js-mcp@latest --base-url https://your-endpoint.com --api-key your-api-key --sam3-base-url http://localhost:8001
+npx -y avc-test-js-mcp@latest --base-url https://your-endpoint.com --api-key your-api-key --sam3-base-url https://your-sam3-endpoint.com
 ```
 
 ## 推荐的工作流程
@@ -402,7 +402,7 @@ API Key 缺失，请检查配置中的 `env.API_KEY`。
 
 ### "TOS 上传失败"
 
-通常是签名不匹配，请确认 `HTTP_API_BASE_URL` 和 `HTTP_API_KEY` 正确且有效。
+通常是签名不匹配，请确认 `HTTP_API_BASE_URL` 和 `API_KEY` 正确且有效。
 
 ## 全局安装（可选）
 

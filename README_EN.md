@@ -85,7 +85,7 @@ Go to **Settings > Tools & MCPs > Add New MCP Server**:
 - **Type**: `command`
 - **Command**:
   ```bash
-  env HTTP_API_KEY=your-api-key npx -y avc-test-js-mcp@latest
+  env API_KEY=your-api-key npx -y avc-test-js-mcp@latest
   ```
 
 Or edit `~/.cursor/mcp.json`:
@@ -128,14 +128,14 @@ After restarting your client, check if the tools are available:
   "env": {
     "HTTP_API_BASE_URL": "https://your-endpoint.com",
     "API_KEY": "your-api-key",
-    "SAM3_API_BASE_URL": "http://localhost:8001"
+    "SAM3_API_BASE_URL": "https://your-sam3-endpoint.com"
   }
 }
 ```
 
 Or via CLI args:
 ```bash
-npx -y avc-test-js-mcp@latest --base-url https://your-endpoint.com --api-key your-api-key --sam3-base-url http://localhost:8001
+npx -y avc-test-js-mcp@latest --base-url https://your-endpoint.com --api-key your-api-key --sam3-base-url https://your-sam3-endpoint.com
 ```
 
 ## Recommended Workflow
@@ -402,7 +402,7 @@ Check logs:
 
 ### "TOS upload failed"
 
-Usually a signature mismatch. Ensure your `HTTP_API_BASE_URL` and `HTTP_API_KEY` are correct and active.
+Usually a signature mismatch. Ensure your `HTTP_API_BASE_URL` and `API_KEY` are correct and active.
 
 ## Global Install (Alternative)
 
