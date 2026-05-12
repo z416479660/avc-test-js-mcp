@@ -12,6 +12,17 @@ const Sam3PredictSchema = z.object({
   prompt: z.string().describe('Text prompt for mask generation. Must be in English. If the user provides Chinese or other non-English text, translate it to English before calling this tool'),
 });
 
+const Sam3CreateTaskSchema = z.object({
+  imagePath: z.string().optional().describe('Absolute path of a local image file (e.g. C:\\\\Users\\\\xxx\\\\photo.png)'),
+  imageUrl: z.string().url().optional().describe('Publicly accessible URL of the image to process'),
+  imageBase64: z.string().optional().describe('Base64-encoded image data. Use this when the image is provided as an attachment without a local path'),
+  prompt: z.string().describe('Text prompt for mask generation. Must be in English. If the user provides Chinese or other non-English text, translate it to English before calling this tool'),
+});
+
+const Sam3GetResultSchema = z.object({
+  task_id: z.string().describe('SAM3 prediction task ID'),
+});
+
 export function setupSam3Tools(
   server: McpServer,
   baseUrl: string,
@@ -28,16 +39,73 @@ export function setupSam3Tools(
     timeout: 60000,
   });
 
+  // sam3_create_task tool
+  server.tool(
+    'sam3_create_task',
+    `创建 SAM3 预测任务（异步）。上传图片并创建分割任务，返回 task_id。
+
+图片可通过三种方式提供：
+1. imagePath: 本地图片绝对路径（如 C:\\Users\\xxx\\photo.png）
+2. imageUrl: 公开可访问的图片 URL
+3. imageBase64: Base64 编码的图片数据
+
+prompt 必须为英文。如果用户提供中文或其他非英文文本，请先翻译成英文再调用。
+
+创建任务后会立即返回 task_id。你需要使用 sam3_get_result 工具轮询查询任务结果。`,
+    Sam3CreateTaskSchema.shape,
+    async (args) => {
+      try {
+        if (!apiKey) {
+          throw new Error('SAM3 API Key not configured. Please set API_KEY environment variable or --api-key argument.');
+        }
+        const { buffer, fileName } = await prepareImageBuffer(args);
+        const taskId = await sam3CreateTask(client, buffer, fileName, args.prompt);
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ success: true, task_id: taskId }, null, 2) }],
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ success: false, error: errorMessage }, null, 2) }],
+        };
+      }
+    }
+  );
+
+  // sam3_get_result tool
+  server.tool(
+    'sam3_get_result',
+    '查询 SAM3 预测任务结果。返回值中的 status 字段可能为：processing（处理中）、completed（已完成）、failed（失败）。如果 status 为 processing，你需要等待几秒后再次调用此工具轮询。',
+    Sam3GetResultSchema.shape,
+    async (args) => {
+      try {
+        const result = await getSam3Result(client, args.task_id);
+        const message = result.status === 'processing' ? '任务仍在处理中，请稍后再查询' : undefined;
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ ...result, message }, null, 2) }],
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ success: false, error: errorMessage }, null, 2) }],
+        };
+      }
+    }
+  );
+
+  // sam3_predict tool (sync, truncated at ~50s)
   server.tool(
     'sam3_predict',
-    `Analyze an image using the SAM3 segmentation API to generate inference results (masks, boxes, scores).
-The image can be provided in one of three ways:
-1. imagePath: Absolute path of a local image file (e.g. C:\\Users\\xxx\\photo.png). Use this when the user provides a local file path.
-2. imageUrl: Publicly accessible URL of the image (e.g. https://example.com/photo.jpg). Use this when the user provides a web link.
-3. imageBase64: Base64-encoded image data. Use this when the user uploads or drags-and-drops an image as an attachment and no local path is available.
-In this case, encode the image content as base64 and pass it via this parameter.
-If the user mentions an uploaded image but does not provide a path, URL, or base64 data, ask the user for the local absolute path.
-Prompt must be in English. If the user provides Chinese or other non-English text, translate it to English before calling this tool.`,
+    `同步执行 SAM3 预测（阻塞等待完成）。
+
+图片可通过三种方式提供：
+1. imagePath: 本地图片绝对路径
+2. imageUrl: 公开可访问的图片 URL
+3. imageBase64: Base64 编码的图片数据
+
+prompt 必须为英文。
+
+此工具仅适合简单场景（预计处理时间 < 1 分钟）。如果任务在 50 秒内未完成，工具会提前返回并包含 task_id，你需要使用 sam3_get_result 继续查询。`,
     Sam3PredictSchema.shape,
     async (args) => {
       try {
@@ -96,41 +164,16 @@ async function sam3Predict(client: AxiosInstance, fileId: string, prompt: string
   return response.data.task_id;
 }
 
-async function getSam3PredictResult(client: AxiosInstance, taskId: string, pollInterval: number, pollMaxAttempts: number): Promise<any> {
-  for (let attempt = 0; attempt < pollMaxAttempts; attempt++) {
-    const response = await client.get(`/predict/result/${encodeURIComponent(taskId)}`);
-    const data = response.data;
-
-    if (data.status === 'completed') {
-      return data;
-    }
-    if (data.status === 'failed') {
-      throw new Error(`Task failed: ${data.error_message || 'unknown error'}`);
-    }
-    await sleep(pollInterval);
-  }
-  throw new Error('Polling timeout: task did not complete in time');
-}
-
 async function downloadSam3Result(url: string): Promise<any> {
   const response = await axios.get(url);
   return response.data;
 }
 
-async function sam3PredictTool(
-  client: AxiosInstance,
-  pollInterval: number,
-  pollMaxAttempts: number,
-  args: z.infer<typeof Sam3PredictSchema>
-): Promise<string> {
-  const { imagePath, imageUrl, imageBase64, prompt } = args;
+async function prepareImageBuffer(args: { imagePath?: string; imageUrl?: string; imageBase64?: string }): Promise<{ buffer: Buffer; fileName: string }> {
+  const { imagePath, imageUrl, imageBase64 } = args;
 
   if (!imagePath && !imageUrl && !imageBase64) {
     throw new Error('Missing image input: must provide one of imagePath, imageUrl, or imageBase64');
-  }
-
-  if (!prompt) {
-    throw new Error('Missing argument: prompt');
   }
 
   let buffer: Buffer;
@@ -153,6 +196,10 @@ async function sam3PredictTool(
     throw new Error('Missing image input: must provide one of imagePath, imageUrl, or imageBase64');
   }
 
+  return { buffer, fileName };
+}
+
+async function sam3CreateTask(client: AxiosInstance, buffer: Buffer, fileName: string, prompt: string): Promise<string> {
   // Step 1: Get post signature
   const signatureData = await getSam3PostSignature(client, fileName);
   const { url, origin_policy } = signatureData;
@@ -177,10 +224,58 @@ async function sam3PredictTool(
   // Step 3: Create predict task
   const taskId = await sam3Predict(client, fileId, prompt);
 
-  // Step 4: Poll for result
+  return taskId;
+}
+
+async function getSam3Result(client: AxiosInstance, taskId: string): Promise<any> {
+  const response = await client.get(`/predict/result/${encodeURIComponent(taskId)}`);
+  return response.data;
+}
+
+async function getSam3PredictResult(client: AxiosInstance, taskId: string, pollInterval: number, pollMaxAttempts: number): Promise<any> {
+  for (let attempt = 0; attempt < pollMaxAttempts; attempt++) {
+    const data = await getSam3Result(client, taskId);
+
+    if (data.status === 'completed') {
+      return data;
+    }
+    if (data.status === 'failed') {
+      throw new Error(`Task failed: ${data.error_message || 'unknown error'}`);
+    }
+    await sleep(pollInterval);
+  }
+  // 达到最大轮询次数仍未完成，返回友好提示而非抛错
+  return {
+    success: true,
+    status: 'processing',
+    task_id: taskId,
+    message: `任务仍在处理中（已等待约 ${pollMaxAttempts * pollInterval / 1000} 秒）。请使用 sam3_get_result 工具继续查询此任务状态。`,
+    note: '此工具对长任务的同步等待已被截断，请切换到 sam3_get_result 轮询模式。',
+  };
+}
+
+async function sam3PredictTool(
+  client: AxiosInstance,
+  pollInterval: number,
+  pollMaxAttempts: number,
+  args: z.infer<typeof Sam3PredictSchema>
+): Promise<string> {
+  if (!args.prompt) {
+    throw new Error('Missing argument: prompt');
+  }
+
+  const { buffer, fileName } = await prepareImageBuffer(args);
+  const taskId = await sam3CreateTask(client, buffer, fileName, args.prompt);
+
+  // Poll for result
   const taskResult = await getSam3PredictResult(client, taskId, pollInterval, pollMaxAttempts);
 
-  // Step 5: Download result JSON and return as string
+  // 如果是被截断的超时结果，直接返回 JSON
+  if (taskResult.success === true && taskResult.status === 'processing') {
+    return JSON.stringify(taskResult, null, 2);
+  }
+
+  // Download result JSON and return as string
   const resultUrl = taskResult.result;
   const resultJson = await downloadSam3Result(resultUrl);
 

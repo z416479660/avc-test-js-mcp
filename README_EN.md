@@ -11,10 +11,16 @@ A video enhancement and image segmentation service based on the MCP protocol, ac
 ## Features
 
 Provides the following MCP Tools:
+
+**Video Enhancement**
 - `create_task` - Create a video enhancement task (supports URL or local file upload)
 - `get_task_status` - Query task status
-- `enhance_video_sync` - Synchronously enhance video (blocking wait)
-- `sam3_predict` - SAM3 image segmentation (supports local path, URL, or Base64 image)
+- `enhance_video_sync` - Synchronously enhance video (blocking wait, truncated at ~50s by default)
+
+**Image Segmentation (SAM3)**
+- `sam3_create_task` - Create a SAM3 prediction task (supports local path, URL, or Base64 image)
+- `sam3_get_result` - Query SAM3 prediction result
+- `sam3_predict` - Synchronously run SAM3 prediction (blocking wait, truncated at ~50s by default)
 
 ## Prerequisites
 
@@ -105,7 +111,7 @@ Or edit `~/.cursor/mcp.json`:
 After restarting your client, check if the tools are available:
 
 1. Or ask: "What tools do you have available?"
-2. You should see: `create_task`, `get_task_status`, `enhance_video_sync`, `sam3_predict`
+2. You should see: `create_task`, `get_task_status`, `enhance_video_sync`, `sam3_create_task`, `sam3_get_result`, `sam3_predict`
 
 ## Configuration Options
 
@@ -114,8 +120,8 @@ After restarting your client, check if the tools are available:
 | `API_KEY` | **Yes** | - | API authentication key (shared by video enhancement and SAM3) |
 | `HTTP_API_BASE_URL` | No | `https://mcp.luluhero.com/enhance` | Video enhancement service endpoint |
 | `SAM3_API_BASE_URL` | No | `https://mcp.luluhero.com/sam` | SAM3 service endpoint |
-| `SAM3_POLL_INTERVAL` | No | `2000` | Polling interval (milliseconds) |
-| `SAM3_POLL_MAX_ATTEMPTS` | No | `60` | Maximum polling attempts |
+| `SAM3_POLL_INTERVAL` | No | `2000` | SAM3 polling interval (milliseconds) |
+| `SAM3_POLL_MAX_ATTEMPTS` | No | `25` | SAM3 maximum polling attempts |
 
 ### Custom Endpoint
 
@@ -123,15 +129,52 @@ After restarting your client, check if the tools are available:
 {
   "env": {
     "HTTP_API_BASE_URL": "https://your-endpoint.com",
-    "HTTP_API_KEY": "your-api-key"
+    "API_KEY": "your-api-key",
+    "SAM3_API_BASE_URL": "http://localhost:8001"
   }
 }
 ```
 
 Or via CLI args:
 ```bash
-npx -y avc-test-js-mcp@latest --base-url https://your-endpoint.com --api-key your-api-key --sam3-base-url http://localhost:8001 --sam3-api-key your-sam3-key
+npx -y avc-test-js-mcp@latest --base-url https://your-endpoint.com --api-key your-api-key --sam3-base-url http://localhost:8001
 ```
+
+## Recommended Workflow
+
+This project provides both **synchronous** and **asynchronous** modes.
+
+**Because MCP Agents typically enforce a ~60-second timeout per tool call**, tasks with longer processing times (video enhancement, complex SAM3 segmentation) are strongly recommended to use **asynchronous mode**:
+
+### Asynchronous Mode (Recommended)
+
+**Video Enhancement:**
+1. Call `create_task` to create a task → immediately get `task_id`
+2. Wait a few seconds, then call `get_task_status` to query the status
+3. If `status` is `processing`, continue waiting and repeat step 2
+4. If `status` is `completed`, the task is done and the result contains `video_url`
+5. If `status` is `failed`, the task failed and the result contains `error_message`
+
+**Image Segmentation (SAM3):**
+1. Call `sam3_create_task` to create a task → immediately get `task_id`
+2. Wait a few seconds, then call `sam3_get_result` to query the result
+3. If `status` is `processing`, continue waiting and repeat step 2
+4. If `status` is `completed`, get the result URL from the `result` field and download the JSON result
+5. If `status` is `failed`, the task failed
+
+### Synchronous Mode (Simple Scenarios)
+
+**Video Enhancement:**
+- Call `enhance_video_sync` → the server polls internally
+- Defaults to a maximum wait of 50 seconds
+- If completed within 50 seconds, returns the result directly
+- If not completed within 50 seconds, returns `task_id` and instructions for the Agent to switch to `get_task_status`
+
+**Image Segmentation (SAM3):**
+- Call `sam3_predict` → the server polls internally
+- Defaults to a maximum wait of 50 seconds (25 attempts × 2-second polling interval)
+- If completed within 50 seconds, returns the segmentation result directly
+- If not completed within 50 seconds, returns `task_id` and instructions for the Agent to switch to `sam3_get_result`
 
 ## Usage Examples
 
@@ -141,19 +184,21 @@ Once configured, ask your AI agent naturally:
 
 > "Improve the quality of /Users/me/Desktop/video.mp4 to 2k"
 
-The agent will automatically call the appropriate tools.
+> "Analyze this image and find all objects: C:\\Users\\xxx\\photo.png"
 
-> "Analyze this image and find all objects: C:\Users\xxx\photo.png"
->
 > "Use SAM3 to segment this image, prompt: 'find all cars'"
+
+The agent will automatically choose sync or async tools based on task complexity.
 
 ## Provided Tools
 
-### create_task
+### Video Enhancement
+
+#### create_task
 
 Create an asynchronous video enhancement task.
 
-> **Recommended for most use cases.** Ideal for longer videos (over 10 seconds) to avoid blocking the connection for an extended period.
+> **Recommended for most use cases.** Ideal for longer videos (over 10 seconds) to avoid timeouts and blocking the connection.
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
@@ -166,13 +211,15 @@ Create an asynchronous video enhancement task.
 {
   "success": true,
   "task_id": "xxx",
-  "status": "wait"
+  "status": "processing"
 }
 ```
 
-### get_task_status
+#### get_task_status
 
-Query task status.
+Query video enhancement task status.
+
+> The returned `status` field can be: `processing`, `completed`, or `failed`. If `status` is `processing`, you need to wait a few seconds and call this tool again.
 
 | Parameter | Type | Required |
 |---|---|---|
@@ -185,33 +232,51 @@ Query task status.
   "task_id": "xxx",
   "status": "completed",
   "progress": 100,
-  "video_url": "https://..."
+  "video_url": "https://...",
+  "message": "任务仍在处理中，请稍后再查询"
 }
 ```
 
-### enhance_video_sync
+The `message` field only appears when `status` is `processing`, prompting the Agent to continue waiting.
+
+#### enhance_video_sync
 
 Synchronously enhance video (blocks until completion).
 
-> **Best for short videos (under 10 seconds).** Long videos may cause timeouts or keep the client connection occupied.
+> **Best for short videos (estimated processing time < 1 minute).** If the task is not completed within 50 seconds, the tool returns early with a `task_id`, and you need to use `get_task_status` to continue querying.
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `video_source` | string | Yes | - | Video URL or local file path (URL must be publicly accessible, links requiring login or signatures are not supported) |
+| `video_source` | string | Yes | - | Video URL or local file path |
 | `type` | string | No | `url` | `url` or `local` |
 | `resolution` | string | No | `720p` | Target resolution |
 | `poll_interval` | number | No | `5` | Poll interval (seconds) |
-| `timeout` | number | No | `600` | Timeout (seconds) |
+| `timeout` | number | No | `50` | Sync wait timeout (seconds), returns early when exceeded |
 
-### sam3_predict
+**Truncated return example (not completed within 50s):**
+```json
+{
+  "success": true,
+  "status": "processing",
+  "task_id": "xxx",
+  "message": "任务仍在处理中（已等待 50 秒）。请使用 get_task_status 工具继续查询此任务状态。",
+  "note": "此工具对长任务的同步等待已被截断，请切换到 get_task_status 轮询模式。"
+}
+```
 
-Analyze an image using the SAM3 segmentation API to generate inference results (masks, boxes, scores).
+### Image Segmentation (SAM3)
+
+#### sam3_create_task
+
+Create a SAM3 prediction task (asynchronous).
+
+> **Recommended for complex image segmentation scenarios** to avoid timeouts.
 
 **Parameters:**
 
 Image input (choose one, must provide exactly one):
 
-- `imagePath` (string): Absolute path of a local image file. Supports common formats (PNG, JPG, JPEG, BMP, WebP).
+- `imagePath` (string): Absolute path of a local image file. Supports common formats (PNG, JPG, JPEG).
   - Example: `"C:\\Users\\xxx\\photo.png"`, `"/home/user/images/cat.jpg"`
   - Use when: The user explicitly provides a local file path
 
@@ -227,9 +292,59 @@ Image input (choose one, must provide exactly one):
 
 Other parameters:
 
-- `prompt` (string, required): English text prompt specifying the target object to segment. Examples: `"person"`, `"car"`, `"a cat sitting on a sofa"`. Since the SAM3 model only accepts English prompts, provide an English description. If the user provides Chinese or other non-English text, the Agent will automatically translate it before calling the tool.
+- `prompt` (string, required): English text prompt specifying the target object to segment. Since the SAM3 model only accepts English prompts, provide an English description. If the user provides Chinese or other non-English text, the Agent will automatically translate it before calling the tool.
 
 **Returns:**
+```json
+{
+  "success": true,
+  "task_id": "xxx"
+}
+```
+
+#### sam3_get_result
+
+Query SAM3 prediction task result.
+
+> The returned `status` field can be: `processing`, `completed`, or `failed`. If `status` is `processing`, you need to wait a few seconds and call this tool again.
+
+| Parameter | Type | Required |
+|---|---|---|
+| `task_id` | string | Yes |
+
+**Returns:**
+```json
+{
+  "status": "completed",
+  "result": "https://.../result.json",
+  "message": "任务仍在处理中，请稍后再查询"
+}
+```
+
+The `message` field only appears when `status` is `processing`.
+
+#### sam3_predict
+
+Synchronously run SAM3 prediction (blocks until completion).
+
+> **Best for simple scenarios (estimated processing time < 1 minute).** If the task is not completed within 50 seconds, the tool returns early with a `task_id`, and you need to use `sam3_get_result` to continue querying.
+
+**Parameters:**
+
+Identical to `sam3_create_task`: `imagePath`, `imageUrl`, `imageBase64` (choose one), and required `prompt`.
+
+**Truncated return example (not completed within 50s):**
+```json
+{
+  "success": true,
+  "status": "processing",
+  "task_id": "xxx",
+  "message": "任务仍在处理中（已等待约 50 秒）。请使用 sam3_get_result 工具继续查询此任务状态。",
+  "note": "此工具对长任务的同步等待已被截断，请切换到 sam3_get_result 轮询模式。"
+}
+```
+
+**Normal completion return:**
 
 After inference completes, returns a JSON string containing three fields:
 
@@ -256,6 +371,22 @@ Example result JSON:
 ```
 
 ## FAQ
+
+### Agent reports timeout when calling tools?
+
+This is the primary issue this project addresses. MCP Agents (such as Claude, Cursor) typically enforce a ~60-second timeout per tool call. If task processing exceeds this limit, the Agent will error and disconnect.
+
+**Solutions:**
+
+1. **Prefer asynchronous tools**: For complex or time-consuming tasks, always use `create_task` + `get_task_status` (video) or `sam3_create_task` + `sam3_get_result` (SAM3). These tools return instantly on each call and will not trigger timeouts.
+
+2. **Sync tool truncation mechanism**: `enhance_video_sync` and `sam3_predict` have an internal 50-second truncation limit. If the task is not completed within 50 seconds, the tool proactively returns a `task_id` and instructs the Agent to use the corresponding async query tool to follow up.
+
+3. **Adjust SAM3 polling parameters** (advanced): If you are confident that SAM3 tasks are usually fast (e.g., under 10 seconds), you can increase polling attempts via environment variable:
+   ```bash
+   SAM3_POLL_MAX_ATTEMPTS=60
+   ```
+   But ensure the total wait time does not exceed your Agent's timeout limit.
 
 ### Drag-and-drop attachment says file not found?
 
@@ -306,9 +437,9 @@ When `type` is `"local"`:
 
 Install Node.js >= 18: https://nodejs.org/
 
-### "Error:需要提供 --api-key 或设置 HTTP_API_KEY"
+### "Error: 需要提供 --api-key 或设置 API_KEY"
 
-Your API Key is missing. Double-check the `env.HTTP_API_KEY` in your config.
+Your API Key is missing. Double-check the `env.API_KEY` in your config.
 
 ### MCP Server shows red/error in client
 
@@ -317,7 +448,7 @@ Check logs:
 - **Claude Desktop Windows**: `%APPDATA%\Claude\logs\mcp*.log`
 - **Cursor**: Output panel > MCP
 
-### "TOS 上传失败"
+### "TOS upload failed"
 
 Usually a signature mismatch. Ensure your `HTTP_API_BASE_URL` and `HTTP_API_KEY` are correct and active.
 
