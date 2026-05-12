@@ -18,14 +18,12 @@
 - `enhance_video_sync` - 同步增强视频（阻塞等待，默认50秒截断）
 
 **图像分割 (SAM3)**
-- `sam3_create_task` - 创建 SAM3 预测任务（支持本地路径、URL 或 Base64 图片）
-- `sam3_get_result` - 查询 SAM3 预测结果
-- `sam3_predict` - 同步执行 SAM3 预测（阻塞等待，默认50秒截断）
+- `sam3_predict` - SAM3 图像分割（支持本地路径、URL 或 Base64 图片）
 
 ## 前置要求
 
-- **Node.js >= 18** （检查：`node --version`）
-- **API Key** （用于身份认证，请联系服务提供方获取）
+- **Node.js >= 18** （检查：`node --version`）
+- **API Key** （用于身份认证，请联系服务提供方获取）
 
 ## 懒人安装（推荐）
 
@@ -111,7 +109,7 @@ AI 会自动完成：
 重启客户端后，确认工具是否加载成功：
 
 1. 或直接问 AI："你有哪些可用的工具？"
-2. 应看到：`create_task`、`get_task_status`、`enhance_video_sync`、`sam3_create_task`、`sam3_get_result`、`sam3_predict`
+2. 应看到：`create_task`、`get_task_status`、`enhance_video_sync`、`sam3_predict`
 
 ## 配置项
 
@@ -144,7 +142,7 @@ npx -y avc-test-js-mcp@latest --base-url https://your-endpoint.com --api-key you
 
 本项目提供了**同步**和**异步**两种模式。
 
-**由于 MCP Agent 对单个 tool 调用通常有约 60 秒的超时限制**，处理时间较长的任务（视频增强、SAM3 复杂图片分割）强烈建议使用**异步模式**：
+**由于 MCP Agent 对单个 tool 调用通常有约 60 秒的超时限制**，处理时间较长的任务（视频增强）强烈建议使用**异步模式**：
 
 ### 异步模式（推荐）
 
@@ -154,13 +152,6 @@ npx -y avc-test-js-mcp@latest --base-url https://your-endpoint.com --api-key you
 3. 如果 `status` 为 `processing`，继续等待并重复步骤 2
 4. 如果 `status` 为 `completed`，任务完成，结果中包含 `video_url`
 5. 如果 `status` 为 `failed`，任务失败，结果中包含 `error_message`
-
-**图像分割 (SAM3)**：
-1. 调用 `sam3_create_task` 创建任务 → 立即获得 `task_id`
-2. 等待几秒后，调用 `sam3_get_result` 查询结果
-3. 如果 `status` 为 `processing`，继续等待并重复步骤 2
-4. 如果 `status` 为 `completed`，获取 `result` 字段中的结果 URL，下载 JSON 结果
-5. 如果 `status` 为 `failed`，任务失败
 
 ### 同步模式（简单场景）
 
@@ -174,7 +165,7 @@ npx -y avc-test-js-mcp@latest --base-url https://your-endpoint.com --api-key you
 - 调用 `sam3_predict` → 服务器内部自动轮询
 - 默认最多等待50秒（25次 × 2秒轮询间隔）
 - 如果50秒内完成，直接返回分割结果
-- 如果50秒未完成，返回 `task_id` 和提示，让 Agent 切换到 `sam3_get_result` 继续查询
+- 如果50秒未完成，返回截断提示，告知任务仍在处理中
 
 ## 使用示例
 
@@ -266,11 +257,9 @@ AI 会根据任务复杂度自动选择同步或异步工具完成任务。
 
 ### 图像分割 (SAM3)
 
-#### sam3_create_task
+#### sam3_predict
 
-创建 SAM3 预测任务（异步）。
-
-> **推荐使用**：适用于复杂图像分割场景，可避免超时。
+使用 SAM3 分割 API 分析图片，生成推理结果（masks、boxes、scores）。
 
 **参数：**
 
@@ -293,56 +282,6 @@ AI 会根据任务复杂度自动选择同步或异步工具完成任务。
 其他参数：
 
 - `prompt` (string, required): 英文文本提示，用于指定要在图片中分割的目标物体。由于 SAM3 模型仅接受英文 prompt，建议传入英文描述。如果用户提供中文或其他非英文文本，Agent 会自动翻译为英文后调用。
-
-**返回值：**
-```json
-{
-  "success": true,
-  "task_id": "xxx"
-}
-```
-
-#### sam3_get_result
-
-查询 SAM3 预测任务结果。
-
-> 返回值中的 `status` 字段可能为：`processing`（处理中）、`completed`（已完成）、`failed`（失败）。如果 `status` 为 `processing`，你需要等待几秒后再次调用此工具轮询。
-
-| 参数 | 类型 | 必填 |
-|---|---|---|
-| `task_id` | string | 是 |
-
-**返回值：**
-```json
-{
-  "status": "completed",
-  "result": "https://.../result.json",
-  "message": "任务仍在处理中，请稍后再查询"
-}
-```
-
-其中 `message` 字段只在 `status` 为 `processing` 时出现。
-
-#### sam3_predict
-
-同步执行 SAM3 预测（阻塞等待完成）。
-
-> **仅适合简单场景（预计处理时间 < 1 分钟）。** 如果任务在50秒内未完成，工具会提前返回并包含 `task_id`，你需要使用 `sam3_get_result` 继续查询。
-
-**参数：**
-
-与 `sam3_create_task` 完全相同：`imagePath`、`imageUrl`、`imageBase64` 三选一，以及必填的 `prompt`。
-
-**截断返回示例（50秒未完成）：**
-```json
-{
-  "success": true,
-  "status": "processing",
-  "task_id": "xxx",
-  "message": "任务仍在处理中（已等待约 50 秒）。请使用 sam3_get_result 工具继续查询此任务状态。",
-  "note": "此工具对长任务的同步等待已被截断，请切换到 sam3_get_result 轮询模式。"
-}
-```
 
 **正常完成返回：**
 
@@ -370,6 +309,17 @@ AI 会根据任务复杂度自动选择同步或异步工具完成任务。
 }
 ```
 
+**截断返回示例（50秒未完成）：**
+```json
+{
+  "success": true,
+  "status": "processing",
+  "task_id": "xxx",
+  "message": "Task is still processing (waited about 50 seconds). Please retry later or record this task_id for manual follow-up.",
+  "note": "The synchronous wait for this long-running task has been truncated."
+}
+```
+
 ## 常见问题
 
 ### Agent 调用工具时报超时怎么办？
@@ -378,11 +328,13 @@ AI 会根据任务复杂度自动选择同步或异步工具完成任务。
 
 **解决方案：**
 
-1. **优先使用异步工具**：对于复杂或耗时任务，始终使用 `create_task` + `get_task_status`（视频）或 `sam3_create_task` + `sam3_get_result`（SAM3）。这些工具每次调用都是瞬间返回的，不会触发超时。
+1. **优先使用异步工具**：对于视频增强等耗时任务，始终使用 `create_task` + `get_task_status`。这些工具每次调用都是瞬间返回的，不会触发超时。
 
-2. **同步工具的截断机制**：`enhance_video_sync` 和 `sam3_predict` 已在内部设置了50秒的截断限制。如果任务未在50秒内完成，工具会主动返回 `task_id`，并提示 Agent 使用对应的异步查询工具继续跟进。
+2. **同步工具的截断机制**：`enhance_video_sync` 已在内部设置了50秒的截断限制。如果任务未在50秒内完成，工具会主动返回 `task_id`，并提示 Agent 使用 `get_task_status` 继续跟进。
 
-3. **调整 SAM3 轮询参数**（高级）：如果你确定 SAM3 任务通常很快（例如10秒内），可以通过环境变量增加轮询次数：
+3. **SAM3 的截断机制**：`sam3_predict` 默认轮询25次（约50秒），如果任务未完成会返回截断提示，告知任务仍在处理中。
+
+4. **调整 SAM3 轮询参数**（高级）：如果你确定 SAM3 任务通常很快（例如10秒内），可以通过环境变量增加轮询次数：
    ```bash
    SAM3_POLL_MAX_ATTEMPTS=60
    ```

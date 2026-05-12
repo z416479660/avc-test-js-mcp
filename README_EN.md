@@ -18,9 +18,7 @@ Provides the following MCP Tools:
 - `enhance_video_sync` - Synchronously enhance video (blocking wait, truncated at ~50s by default)
 
 **Image Segmentation (SAM3)**
-- `sam3_create_task` - Create a SAM3 prediction task (supports local path, URL, or Base64 image)
-- `sam3_get_result` - Query SAM3 prediction result
-- `sam3_predict` - Synchronously run SAM3 prediction (blocking wait, truncated at ~50s by default)
+- `sam3_predict` - SAM3 image segmentation (supports local path, URL, or Base64 image)
 
 ## Prerequisites
 
@@ -111,7 +109,7 @@ Or edit `~/.cursor/mcp.json`:
 After restarting your client, check if the tools are available:
 
 1. Or ask: "What tools do you have available?"
-2. You should see: `create_task`, `get_task_status`, `enhance_video_sync`, `sam3_create_task`, `sam3_get_result`, `sam3_predict`
+2. You should see: `create_task`, `get_task_status`, `enhance_video_sync`, `sam3_predict`
 
 ## Configuration Options
 
@@ -144,7 +142,7 @@ npx -y avc-test-js-mcp@latest --base-url https://your-endpoint.com --api-key you
 
 This project provides both **synchronous** and **asynchronous** modes.
 
-**Because MCP Agents typically enforce a ~60-second timeout per tool call**, tasks with longer processing times (video enhancement, complex SAM3 segmentation) are strongly recommended to use **asynchronous mode**:
+**Because MCP Agents typically enforce a ~60-second timeout per tool call**, tasks with longer processing times (video enhancement) are strongly recommended to use **asynchronous mode**:
 
 ### Asynchronous Mode (Recommended)
 
@@ -154,13 +152,6 @@ This project provides both **synchronous** and **asynchronous** modes.
 3. If `status` is `processing`, continue waiting and repeat step 2
 4. If `status` is `completed`, the task is done and the result contains `video_url`
 5. If `status` is `failed`, the task failed and the result contains `error_message`
-
-**Image Segmentation (SAM3):**
-1. Call `sam3_create_task` to create a task → immediately get `task_id`
-2. Wait a few seconds, then call `sam3_get_result` to query the result
-3. If `status` is `processing`, continue waiting and repeat step 2
-4. If `status` is `completed`, get the result URL from the `result` field and download the JSON result
-5. If `status` is `failed`, the task failed
 
 ### Synchronous Mode (Simple Scenarios)
 
@@ -174,7 +165,7 @@ This project provides both **synchronous** and **asynchronous** modes.
 - Call `sam3_predict` → the server polls internally
 - Defaults to a maximum wait of 50 seconds (25 attempts × 2-second polling interval)
 - If completed within 50 seconds, returns the segmentation result directly
-- If not completed within 50 seconds, returns `task_id` and instructions for the Agent to switch to `sam3_get_result`
+- If not completed within 50 seconds, returns a truncation notice indicating the task is still processing
 
 ## Usage Examples
 
@@ -266,11 +257,9 @@ Synchronously enhance video (blocks until completion).
 
 ### Image Segmentation (SAM3)
 
-#### sam3_create_task
+#### sam3_predict
 
-Create a SAM3 prediction task (asynchronous).
-
-> **Recommended for complex image segmentation scenarios** to avoid timeouts.
+Analyze an image using the SAM3 segmentation API to generate inference results (masks, boxes, scores).
 
 **Parameters:**
 
@@ -293,56 +282,6 @@ Image input (choose one, must provide exactly one):
 Other parameters:
 
 - `prompt` (string, required): English text prompt specifying the target object to segment. Since the SAM3 model only accepts English prompts, provide an English description. If the user provides Chinese or other non-English text, the Agent will automatically translate it before calling the tool.
-
-**Returns:**
-```json
-{
-  "success": true,
-  "task_id": "xxx"
-}
-```
-
-#### sam3_get_result
-
-Query SAM3 prediction task result.
-
-> The returned `status` field can be: `processing`, `completed`, or `failed`. If `status` is `processing`, you need to wait a few seconds and call this tool again.
-
-| Parameter | Type | Required |
-|---|---|---|
-| `task_id` | string | Yes |
-
-**Returns:**
-```json
-{
-  "status": "completed",
-  "result": "https://.../result.json",
-  "message": "任务仍在处理中，请稍后再查询"
-}
-```
-
-The `message` field only appears when `status` is `processing`.
-
-#### sam3_predict
-
-Synchronously run SAM3 prediction (blocks until completion).
-
-> **Best for simple scenarios (estimated processing time < 1 minute).** If the task is not completed within 50 seconds, the tool returns early with a `task_id`, and you need to use `sam3_get_result` to continue querying.
-
-**Parameters:**
-
-Identical to `sam3_create_task`: `imagePath`, `imageUrl`, `imageBase64` (choose one), and required `prompt`.
-
-**Truncated return example (not completed within 50s):**
-```json
-{
-  "success": true,
-  "status": "processing",
-  "task_id": "xxx",
-  "message": "任务仍在处理中（已等待约 50 秒）。请使用 sam3_get_result 工具继续查询此任务状态。",
-  "note": "此工具对长任务的同步等待已被截断，请切换到 sam3_get_result 轮询模式。"
-}
-```
 
 **Normal completion return:**
 
@@ -370,6 +309,17 @@ Example result JSON:
 }
 ```
 
+**Truncated return example (not completed within 50s):**
+```json
+{
+  "success": true,
+  "status": "processing",
+  "task_id": "xxx",
+  "message": "Task is still processing (waited about 50 seconds). Please retry later or record this task_id for manual follow-up.",
+  "note": "The synchronous wait for this long-running task has been truncated."
+}
+```
+
 ## FAQ
 
 ### Agent reports timeout when calling tools?
@@ -378,11 +328,13 @@ This is the primary issue this project addresses. MCP Agents (such as Claude, Cu
 
 **Solutions:**
 
-1. **Prefer asynchronous tools**: For complex or time-consuming tasks, always use `create_task` + `get_task_status` (video) or `sam3_create_task` + `sam3_get_result` (SAM3). These tools return instantly on each call and will not trigger timeouts.
+1. **Prefer asynchronous tools**: For video enhancement and other time-consuming tasks, always use `create_task` + `get_task_status`. These tools return instantly on each call and will not trigger timeouts.
 
-2. **Sync tool truncation mechanism**: `enhance_video_sync` and `sam3_predict` have an internal 50-second truncation limit. If the task is not completed within 50 seconds, the tool proactively returns a `task_id` and instructs the Agent to use the corresponding async query tool to follow up.
+2. **Sync tool truncation mechanism**: `enhance_video_sync` has an internal 50-second truncation limit. If the task is not completed within 50 seconds, the tool proactively returns a `task_id` and instructs the Agent to use `get_task_status` to follow up.
 
-3. **Adjust SAM3 polling parameters** (advanced): If you are confident that SAM3 tasks are usually fast (e.g., under 10 seconds), you can increase polling attempts via environment variable:
+3. **SAM3 truncation mechanism**: `sam3_predict` defaults to 25 polling attempts (~50 seconds). If the task is not completed, it returns a truncation notice indicating the task is still processing.
+
+4. **Adjust SAM3 polling parameters** (advanced): If you are confident that SAM3 tasks are usually fast (e.g., under 10 seconds), you can increase polling attempts via environment variable:
    ```bash
    SAM3_POLL_MAX_ATTEMPTS=60
    ```
