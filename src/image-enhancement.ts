@@ -6,22 +6,29 @@ import { z } from 'zod';
 import FormData from 'form-data';
 
 // Schemas
-const CreateImageTaskSchema = z.object({
+const EnhanceImageSchema = z.object({
   image_source: z.string().describe('Image URL or local file path (URL must be publicly accessible, login or signed links are not supported)'),
   type: z.enum(['url', 'local']).default('url').describe('Upload type: url=remote image, local=local file'),
-  task_type: z.enum(['enhance', 'colorize', 'denoise']).default('enhance').describe('Image processing type: enhance=image enhancement, colorize=black-and-white photo colorization, denoise=image denoising'),
+  poll_interval: z.number().default(5).describe('Polling interval in seconds, default 5'),
+  timeout: z.number().default(50).describe('Synchronous wait timeout in seconds, default 50. Returns task_id early when exceeded, use get_image_task_status to continue polling'),
+});
+
+const ColorizeImageSchema = z.object({
+  image_source: z.string().describe('Image URL or local file path (URL must be publicly accessible, login or signed links are not supported)'),
+  type: z.enum(['url', 'local']).default('url').describe('Upload type: url=remote image, local=local file'),
+  poll_interval: z.number().default(5).describe('Polling interval in seconds, default 5'),
+  timeout: z.number().default(50).describe('Synchronous wait timeout in seconds, default 50. Returns task_id early when exceeded, use get_image_task_status to continue polling'),
+});
+
+const DenoiseImageSchema = z.object({
+  image_source: z.string().describe('Image URL or local file path (URL must be publicly accessible, login or signed links are not supported)'),
+  type: z.enum(['url', 'local']).default('url').describe('Upload type: url=remote image, local=local file'),
+  poll_interval: z.number().default(5).describe('Polling interval in seconds, default 5'),
+  timeout: z.number().default(50).describe('Synchronous wait timeout in seconds, default 50. Returns task_id early when exceeded, use get_image_task_status to continue polling'),
 });
 
 const GetImageTaskStatusSchema = z.object({
   task_id: z.string().describe('Task ID'),
-});
-
-const EnhanceImageSyncSchema = z.object({
-  image_source: z.string().describe('Image URL or local file path (URL must be publicly accessible, login or signed links are not supported)'),
-  type: z.enum(['url', 'local']).default('url').describe('Upload type: url=remote image, local=local file'),
-  task_type: z.enum(['enhance', 'colorize', 'denoise']).default('enhance').describe('Image processing type: enhance=image enhancement, colorize=black-and-white photo colorization, denoise=image denoising'),
-  poll_interval: z.number().default(5).describe('Polling interval in seconds, default 5'),
-  timeout: z.number().default(50).describe('Synchronous wait timeout in seconds, default 50. Returns task_id early when exceeded, use get_image_task_status to continue polling'),
 });
 
 export function setupImageEnhancementTools(server: McpServer, baseUrl: string, apiKey: string): void {
@@ -34,15 +41,10 @@ export function setupImageEnhancementTools(server: McpServer, baseUrl: string, a
     timeout: 60000,
   });
 
-  // create_image_task tool
+  // enhance_image tool
   server.tool(
-    'create_image_task',
-    `Create an image processing task (asynchronous).
-
-Three processing types are supported:
-1. enhance: Image enhancement (quality improvement, face optimization)
-2. colorize: Black-and-white photo colorization
-3. denoise: Image denoising
+    'enhance_image',
+    `Enhance an image to improve quality and optimize faces (synchronous).
 
 Two upload methods are supported:
 1. URL upload: provide an image URL
@@ -51,13 +53,78 @@ Two upload methods are supported:
 Parameters:
 - image_source: image URL or local file path
 - type: "url" or "local"
-- task_type: "enhance", "colorize", or "denoise"
+- poll_interval: polling interval in seconds
+- timeout: synchronous wait timeout in seconds, default 50
 
-After creating a task, a task_id is returned immediately. Use get_image_task_status to poll for results until status becomes "completed" or "failed".`,
-    CreateImageTaskSchema.shape,
+Best for images with estimated processing time < 1 minute. If the task is not completed within 50 seconds, the tool returns early with a task_id. Use get_image_task_status to continue polling.`,
+    EnhanceImageSchema.shape,
     async (args) => {
       try {
-        const result = await createImageTask(client, args.image_source, args.type, args.task_type);
+        const result = await processImageSync(client, args.image_source, args.type, 'enhance', args.poll_interval, args.timeout);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ success: false, error: errorMessage }, null, 2) }],
+        };
+      }
+    }
+  );
+
+  // colorize_image tool
+  server.tool(
+    'colorize_image',
+    `Colorize a black-and-white photo (synchronous).
+
+Two upload methods are supported:
+1. URL upload: provide an image URL
+2. Local upload: provide a local file path, the MCP Server will auto-upload to TOS object storage
+
+Parameters:
+- image_source: image URL or local file path
+- type: "url" or "local"
+- poll_interval: polling interval in seconds
+- timeout: synchronous wait timeout in seconds, default 50
+
+Best for images with estimated processing time < 1 minute. If the task is not completed within 50 seconds, the tool returns early with a task_id. Use get_image_task_status to continue polling.`,
+    ColorizeImageSchema.shape,
+    async (args) => {
+      try {
+        const result = await processImageSync(client, args.image_source, args.type, 'colorize', args.poll_interval, args.timeout);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ success: false, error: errorMessage }, null, 2) }],
+        };
+      }
+    }
+  );
+
+  // denoise_image tool
+  server.tool(
+    'denoise_image',
+    `Remove noise from an image (synchronous).
+
+Two upload methods are supported:
+1. URL upload: provide an image URL
+2. Local upload: provide a local file path, the MCP Server will auto-upload to TOS object storage
+
+Parameters:
+- image_source: image URL or local file path
+- type: "url" or "local"
+- poll_interval: polling interval in seconds
+- timeout: synchronous wait timeout in seconds, default 50
+
+Best for images with estimated processing time < 1 minute. If the task is not completed within 50 seconds, the tool returns early with a task_id. Use get_image_task_status to continue polling.`,
+    DenoiseImageSchema.shape,
+    async (args) => {
+      try {
+        const result = await processImageSync(client, args.image_source, args.type, 'denoise', args.poll_interval, args.timeout);
         return {
           content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
         };
@@ -78,51 +145,6 @@ After creating a task, a task_id is returned immediately. Use get_image_task_sta
     async (args) => {
       try {
         const result = await getImageTaskStatus(client, args.task_id);
-        return {
-          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-        };
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        return {
-          content: [{ type: 'text', text: JSON.stringify({ success: false, error: errorMessage }, null, 2) }],
-        };
-      }
-    }
-  );
-
-  // enhance_image_sync tool
-  server.tool(
-    'enhance_image_sync',
-    `Synchronously process an image (blocks until completion).
-
-Three processing types are supported:
-1. enhance: Image enhancement (quality improvement, face optimization)
-2. colorize: Black-and-white photo colorization
-3. denoise: Image denoising
-
-Two upload methods are supported:
-1. URL upload: provide an image URL
-2. Local upload: provide a local file path, the MCP Server will auto-upload to TOS object storage
-
-Parameters:
-- image_source: image URL or local file path
-- type: "url" or "local"
-- task_type: "enhance", "colorize", or "denoise"
-- poll_interval: polling interval in seconds
-- timeout: synchronous wait timeout in seconds, default 50
-
-Best for simple images (estimated processing time < 1 minute). If the task is not completed within 50 seconds, the tool returns early with a task_id. Use get_image_task_status to continue polling.`,
-    EnhanceImageSyncSchema.shape,
-    async (args) => {
-      try {
-        const result = await enhanceImageSync(
-          client,
-          args.image_source,
-          args.type,
-          args.task_type,
-          args.poll_interval,
-          args.timeout
-        );
         return {
           content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
         };
@@ -274,7 +296,7 @@ async function getImageTaskStatus(client: AxiosInstance, taskId: string): Promis
   };
 }
 
-async function enhanceImageSync(
+async function processImageSync(
   client: AxiosInstance,
   imageSource: string,
   sourceType: string,

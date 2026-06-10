@@ -18,9 +18,10 @@
 - `enhance_video_sync` - 同步增强视频（阻塞等待，默认50秒截断）
 
 **图片增强**
-- `create_image_task` - 创建图片处理任务：增强、上色或降噪（支持 URL 或本地文件上传）
+- `enhance_image` - 图片增强（画质提升、人脸优化，支持 URL 或本地文件上传）
+- `colorize_image` - 黑白照片上色（支持 URL 或本地文件上传）
+- `denoise_image` - 图片降噪（支持 URL 或本地文件上传）
 - `get_image_task_status` - 查询图片任务状态
-- `enhance_image_sync` - 同步处理图片（阻塞等待，默认50秒截断）
 
 **图像分割 (SAM3)**
 - `sam3_predict` - SAM3 图像分割（支持本地路径、URL 或 Base64 图片）
@@ -114,7 +115,7 @@ AI 会自动完成：
 重启客户端后，确认工具是否加载成功：
 
 1. 或直接问 AI："你有哪些可用的工具？"
-2. 应看到：`create_task`、`get_task_status`、`enhance_video_sync`、`create_image_task`、`get_image_task_status`、`enhance_image_sync`、`sam3_predict`
+2. 应看到：`create_task`、`get_task_status`、`enhance_video_sync`、`enhance_image`、`colorize_image`、`denoise_image`、`get_image_task_status`、`sam3_predict`
 
 ## 配置项
 
@@ -268,26 +269,44 @@ AI 会根据任务复杂度自动选择同步或异步工具完成任务。
 
 ### 图片增强
 
-#### create_image_task
+#### enhance_image
 
-创建图片处理任务（异步），支持增强、上色、降噪三种类型。
+图片增强（画质提升、人脸优化），同步等待完成。
 
-> **推荐使用**：图片处理可能需要一定时间，异步模式可避免超时。
+> **仅适合简单图片（预计处理时间 < 1 分钟）。** 如果任务在50秒内未完成，工具会提前返回并包含 `task_id`，你需要使用 `get_image_task_status` 继续查询。
 
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 |---|---|---|---|---|
-| `image_source` | string | 是 | - | 图片 URL 或本地文件路径（URL 必须公网可访问，不支持需要登录或签名的链接） |
+| `image_source` | string | 是 | - | 图片 URL 或本地文件路径 |
 | `type` | string | 否 | `url` | `url` 或 `local` |
-| `task_type` | string | 否 | `enhance` | `enhance`（画质增强、人脸优化）、`colorize`（黑白照片上色）、`denoise`（图片降噪） |
+| `poll_interval` | number | 否 | `5` | 轮询间隔（秒） |
+| `timeout` | number | 否 | `50` | 同步等待超时时间（秒），超过后主动返回 |
 
-**返回值：**
-```json
-{
-  "success": true,
-  "task_id": "xxx",
-  "status": "processing"
-}
-```
+#### colorize_image
+
+黑白照片上色，同步等待完成。
+
+> **仅适合简单图片（预计处理时间 < 1 分钟）。** 如果任务在50秒内未完成，工具会提前返回并包含 `task_id`，你需要使用 `get_image_task_status` 继续查询。
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|---|---|---|---|---|
+| `image_source` | string | 是 | - | 图片 URL 或本地文件路径 |
+| `type` | string | 否 | `url` | `url` 或 `local` |
+| `poll_interval` | number | 否 | `5` | 轮询间隔（秒） |
+| `timeout` | number | 否 | `50` | 同步等待超时时间（秒），超过后主动返回 |
+
+#### denoise_image
+
+图片降噪，同步等待完成。
+
+> **仅适合简单图片（预计处理时间 < 1 分钟）。** 如果任务在50秒内未完成，工具会提前返回并包含 `task_id`，你需要使用 `get_image_task_status` 继续查询。
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|---|---|---|---|---|
+| `image_source` | string | 是 | - | 图片 URL 或本地文件路径 |
+| `type` | string | 否 | `url` | `url` 或 `local` |
+| `poll_interval` | number | 否 | `5` | 轮询间隔（秒） |
+| `timeout` | number | 否 | `50` | 同步等待超时时间（秒），超过后主动返回 |
 
 #### get_image_task_status
 
@@ -312,20 +331,6 @@ AI 会根据任务复杂度自动选择同步或异步工具完成任务。
 ```
 
 其中 `message` 字段只在 `status` 为 `processing` 时出现，提示 Agent 继续等待。
-
-#### enhance_image_sync
-
-同步处理图片（阻塞等待完成）。
-
-> **仅适合简单图片（预计处理时间 < 1 分钟）。** 如果任务在50秒内未完成，工具会提前返回并包含 `task_id`，你需要使用 `get_image_task_status` 继续查询。
-
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
-|---|---|---|---|---|
-| `image_source` | string | 是 | - | 图片 URL 或本地文件路径 |
-| `type` | string | 否 | `url` | `url` 或 `local` |
-| `task_type` | string | 否 | `enhance` | `enhance`、`colorize` 或 `denoise` |
-| `poll_interval` | number | 否 | `5` | 轮询间隔（秒） |
-| `timeout` | number | 否 | `50` | 同步等待超时时间（秒），超过后主动返回 |
 
 **截断返回示例（50秒未完成）：**
 ```json

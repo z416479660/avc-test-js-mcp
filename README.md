@@ -18,9 +18,10 @@ Provides the following MCP Tools:
 - `enhance_video_sync` - Synchronously enhance video (blocking wait, truncated at ~50s by default)
 
 **Image Enhancement**
-- `create_image_task` - Create an image processing task: enhancement, colorization, or denoising (supports URL or local file upload)
+- `enhance_image` - Enhance image quality and optimize faces (supports URL or local file upload)
+- `colorize_image` - Colorize black-and-white photos (supports URL or local file upload)
+- `denoise_image` - Remove noise from images (supports URL or local file upload)
 - `get_image_task_status` - Query image task status
-- `enhance_image_sync` - Synchronously process an image (blocking wait, truncated at ~50s by default)
 
 **Image Segmentation (SAM3)**
 - `sam3_predict` - SAM3 image segmentation (supports local path, URL, or Base64 image)
@@ -114,7 +115,7 @@ Or edit `~/.cursor/mcp.json`:
 After restarting your client, check if the tools are available:
 
 1. Or ask: "What tools do you have available?"
-2. You should see: `create_task`, `get_task_status`, `enhance_video_sync`, `create_image_task`, `get_image_task_status`, `enhance_image_sync`, `sam3_predict`
+2. You should see: `create_task`, `get_task_status`, `enhance_video_sync`, `enhance_image`, `colorize_image`, `denoise_image`, `get_image_task_status`, `sam3_predict`
 
 ## Configuration Options
 
@@ -268,26 +269,44 @@ Synchronously enhance video (blocks until completion).
 
 ### Image Enhancement
 
-#### create_image_task
+#### enhance_image
 
-Create an asynchronous image processing task (enhancement, colorization, or denoising).
+Enhance image quality and optimize faces (synchronous).
 
-> **Recommended for most use cases.** Image processing can take time, so asynchronous mode avoids timeouts.
+> **Best for simple images (estimated processing time < 1 minute).** If the task is not completed within 50 seconds, the tool returns early with a `task_id`, and you need to use `get_image_task_status` to continue querying.
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `image_source` | string | Yes | - | Image URL or local file path (URL must be publicly accessible, links requiring login or signatures are not supported) |
+| `image_source` | string | Yes | - | Image URL or local file path |
 | `type` | string | No | `url` | `url` or `local` |
-| `task_type` | string | No | `enhance` | `enhance` (quality enhancement, face optimization), `colorize` (B&W photo colorization), `denoise` (remove noise) |
+| `poll_interval` | number | No | `5` | Poll interval (seconds) |
+| `timeout` | number | No | `50` | Sync wait timeout (seconds), returns early when exceeded |
 
-**Returns:**
-```json
-{
-  "success": true,
-  "task_id": "xxx",
-  "status": "processing"
-}
-```
+#### colorize_image
+
+Colorize black-and-white photos (synchronous).
+
+> **Best for simple images (estimated processing time < 1 minute).** If the task is not completed within 50 seconds, the tool returns early with a `task_id`, and you need to use `get_image_task_status` to continue querying.
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `image_source` | string | Yes | - | Image URL or local file path |
+| `type` | string | No | `url` | `url` or `local` |
+| `poll_interval` | number | No | `5` | Poll interval (seconds) |
+| `timeout` | number | No | `50` | Sync wait timeout (seconds), returns early when exceeded |
+
+#### denoise_image
+
+Remove noise from images (synchronous).
+
+> **Best for simple images (estimated processing time < 1 minute).** If the task is not completed within 50 seconds, the tool returns early with a `task_id`, and you need to use `get_image_task_status` to continue querying.
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `image_source` | string | Yes | - | Image URL or local file path |
+| `type` | string | No | `url` | `url` or `local` |
+| `poll_interval` | number | No | `5` | Poll interval (seconds) |
+| `timeout` | number | No | `50` | Sync wait timeout (seconds), returns early when exceeded |
 
 #### get_image_task_status
 
@@ -312,20 +331,6 @@ Query image processing task status.
 ```
 
 The `message` field only appears when `status` is `processing`, prompting the Agent to continue waiting.
-
-#### enhance_image_sync
-
-Synchronously process an image (blocks until completion).
-
-> **Best for simple images (estimated processing time < 1 minute).** If the task is not completed within 50 seconds, the tool returns early with a `task_id`, and you need to use `get_image_task_status` to continue querying.
-
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `image_source` | string | Yes | - | Image URL or local file path |
-| `type` | string | No | `url` | `url` or `local` |
-| `task_type` | string | No | `enhance` | `enhance`, `colorize`, or `denoise` |
-| `poll_interval` | number | No | `5` | Poll interval (seconds) |
-| `timeout` | number | No | `50` | Sync wait timeout (seconds), returns early when exceeded |
 
 **Truncated return example (not completed within 50s):**
 ```json
