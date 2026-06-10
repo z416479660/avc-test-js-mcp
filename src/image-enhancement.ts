@@ -241,20 +241,46 @@ async function createImageTask(
 
   if (sourceType === 'local') {
     const fileInfo = checkLocalFile(imageSource);
-    const signatureData = await getImageTosSignature(client, fileInfo.fileName);
-    await uploadToTos(imageSource, signatureData);
+
+    // Step 1: Get TOS signature
+    let signatureData: any;
+    try {
+      signatureData = await getImageTosSignature(client, fileInfo.fileName);
+    } catch (error: any) {
+      const detail = error.response ? `status=${error.response.status} data=${JSON.stringify(error.response.data)}` : error.message;
+      return { success: false, error: `[Step 1: TOS signature failed] ${detail}` };
+    }
+
+    // Step 2: Upload to TOS
+    try {
+      await uploadToTos(imageSource, signatureData);
+    } catch (error: any) {
+      const detail = error.response
+        ? `status=${error.response.status} statusText=${error.response.statusText} url=${signatureData.url?.substring(0, 80)}...`
+        : error.message;
+      return { success: false, error: `[Step 2: TOS upload failed] ${detail}` };
+    }
+
+    // Step 3: Parse file_id
     const fileId = parseFileIdFromUrl(signatureData.url);
     contentItem = { type: 'image_file', file_id: fileId, file_name: fileInfo.fileName };
   } else {
     contentItem = { type: 'image_url', image_url: { url: imageSource } };
   }
 
+  // Step 4: Call image API
   const endpoint = getEndpointByTaskType(taskType);
   const payload: any = { model: 'avc-enhance', content: [contentItem] };
   if (scale !== undefined) {
     payload.scale = scale;
   }
-  const response = await client.post(endpoint, payload);
+  let response: any;
+  try {
+    response = await client.post(endpoint, payload);
+  } catch (error: any) {
+    const detail = error.response ? `status=${error.response.status} data=${JSON.stringify(error.response.data)}` : error.message;
+    return { success: false, error: `[Step 4: API call failed] endpoint=${endpoint} ${detail}` };
+  }
   const data = response.data;
 
   if (data.code !== 0 && data.code !== 200) {
