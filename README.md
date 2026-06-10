@@ -18,10 +18,13 @@ Provides the following MCP Tools:
 - `enhance_video_sync` - Synchronously enhance video (blocking wait, truncated at ~50s by default)
 
 **Image Enhancement**
-- `enhance_image` - Enhance image quality and optimize faces (supports URL or local file upload)
-- `colorize_image` - Colorize black-and-white photos (supports URL or local file upload)
-- `denoise_image` - Remove noise from images (supports URL or local file upload)
+- `create_enhance_task` - Create an image enhancement task (asynchronous)
+- `create_colorize_task` - Create a colorization task (asynchronous)
+- `create_denoise_task` - Create a denoising task (asynchronous)
 - `get_image_task_status` - Query image task status
+- `enhance_image_sync` - Synchronously enhance image (blocking wait, truncated at ~50s by default)
+- `colorize_image_sync` - Synchronously colorize image (blocking wait, truncated at ~50s by default)
+- `denoise_image_sync` - Synchronously denoise image (blocking wait, truncated at ~50s by default)
 
 **Image Segmentation (SAM3)**
 - `sam3_predict` - SAM3 image segmentation (supports local path, URL, or Base64 image)
@@ -115,7 +118,7 @@ Or edit `~/.cursor/mcp.json`:
 After restarting your client, check if the tools are available:
 
 1. Or ask: "What tools do you have available?"
-2. You should see: `create_task`, `get_task_status`, `enhance_video_sync`, `enhance_image`, `colorize_image`, `denoise_image`, `get_image_task_status`, `sam3_predict`
+2. You should see: `create_task`, `get_task_status`, `enhance_video_sync`, `create_enhance_task`, `create_colorize_task`, `create_denoise_task`, `get_image_task_status`, `enhance_image_sync`, `colorize_image_sync`, `denoise_image_sync`, `sam3_predict`
 
 ## Configuration Options
 
