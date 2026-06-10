@@ -191,7 +191,103 @@ npx -y avc-test-js-mcp@latest --base-url https://your-endpoint.com --api-key you
 
 > "用 SAM3 分割这张图片，prompt 是 'find all cars'"
 
-AI 会根据任务复杂度自动选择同步或异步工具完成任务。
+AI 会根据你的请求自动选择合适的工具。
+
+### 图片增强使用示例
+
+#### 示例 1：通过 URL 增强图片（最简单）
+
+直接告诉 AI：
+> "帮我把这张图片增强一下：https://example.com/blurry-photo.jpg"
+
+AI 会调用 `enhance_image_sync`：
+```json
+{
+  "image_source": "https://example.com/blurry-photo.jpg",
+  "type": "url"
+}
+```
+全部使用默认值：`type="url"`、`scale=2`、`poll_interval=5`、`timeout=50`。无需额外指定任何参数。
+
+#### 示例 2：增强本地图片 + 4倍放大
+
+> "帮我把这张照片增强到4倍分辨率：D:\\photos\\family.jpg"
+
+AI 会调用 `enhance_image_sync`：
+```json
+{
+  "image_source": "D:\\photos\\family.jpg",
+  "type": "local",
+  "scale": 4
+}
+```
+`scale=4` 表示图片放大4倍。MCP Server 会自动将本地文件上传到 TOS 对象存储。
+
+#### 示例 3：黑白照片上色（自定义超时时间）
+
+> "帮这张黑白照片上色，多等一会儿也没关系：/Users/me/Desktop/old_photo.png"
+
+AI 可能会调用 `colorize_image_sync` 并设置更长的超时：
+```json
+{
+  "image_source": "/Users/me/Desktop/old_photo.png",
+  "type": "local",
+  "timeout": 55
+}
+```
+`timeout=55` 表示工具最多等待55秒后再截断返回。
+
+#### 示例 4：图片降噪（自定义轮询间隔）
+
+> "这张图片噪点很多，帮我降噪：https://example.com/noisy.jpg"
+
+AI 会调用 `denoise_image_sync`：
+```json
+{
+  "image_source": "https://example.com/noisy.jpg",
+  "type": "url",
+  "poll_interval": 3,
+  "timeout": 50
+}
+```
+`poll_interval=3` 表示每3秒检查一次（比默认的5秒更快）。
+
+#### 示例 5：超时截断 → 手动轮询
+
+如果工具超时了（50秒不够），你会收到：
+```json
+{
+  "success": true,
+  "status": "processing",
+  "task_id": "img_abc123",
+  "message": "任务仍在处理中（已等待 50 秒）。请使用 get_image_task_status 工具继续查询此任务状态。",
+  "note": "此工具对长任务的同步等待已被截断，请切换到 get_image_task_status 轮询模式。"
+}
+```
+
+然后对 AI 说：
+> "帮我查一下任务 img_abc123 的状态"
+
+AI 会调用 `get_image_task_status`：
+```json
+{
+  "task_id": "img_abc123"
+}
+```
+
+重复调用直到 `status` 变为 `"completed"` 或 `"failed"`。
+
+#### 参数组合参考
+
+| 场景 | `type` | `scale` | `poll_interval` | `timeout` | 说明 |
+|---|---|---|---|---|---|
+| 快速 URL 增强 | `url`（默认） | `2`（默认） | `5`（默认） | `50`（默认） | 全部默认，只需提供 `image_source` |
+| 本地文件增强 | `local` | `2`（默认） | `5`（默认） | `50`（默认） | 必须将 `type` 设为 `"local"` |
+| 4倍放大增强 | 任意 | `4` | `5`（默认） | `50`（默认） | scale 越大，输出图片越大 |
+| 等待更长时间 | 任意 | 任意 | `5`（默认） | `55`-`58` | 增大 timeout，但不超过60秒（MCP Agent 超时限制） |
+| 更快获得反馈 | 任意 | 任意 | `2`-`3` | `50`（默认） | 减小 poll_interval 以更快检查 |
+| 大图/处理慢 | 任意 | 任意 | `5`（默认） | `50`（默认） | 超时后用 `get_image_task_status` 手动轮询 |
+| 上色 / 降噪 | 任意 | 不适用 | `5`（默认） | `50`（默认） | `scale` 仅 `enhance_image_sync` 有效 |
 
 ## 提供的 Tools
 
@@ -295,6 +391,7 @@ AI 会根据任务复杂度自动选择同步或异步工具完成任务。
 |---|---|---|---|---|
 | `image_source` | string | 是 | - | 图片 URL 或本地文件路径（URL 必须公网可访问，不支持需要登录或签名的链接） |
 | `type` | string | 否 | `url` | `url` 或 `local` |
+| `scale` | number | 否 | `2` | 增强放大倍数（如 `2` 为2倍，`4` 为4倍） |
 | `poll_interval` | number | 否 | `5` | 轮询间隔（秒） |
 | `timeout` | number | 否 | `50` | 同步等待超时时间（秒），超过后主动返回 |
 

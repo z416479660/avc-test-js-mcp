@@ -191,7 +191,103 @@ Once configured, ask your AI agent naturally:
 
 > "Use SAM3 to segment this image, prompt: 'find all cars'"
 
-The agent will automatically choose sync or async tools based on task complexity.
+The agent will automatically choose the right tool based on your request.
+
+### Image Enhancement Usage Examples
+
+#### Example 1: Enhance an image via URL (simplest)
+
+Just tell the agent:
+> "Enhance this image: https://example.com/blurry-photo.jpg"
+
+The agent will call `enhance_image_sync` with:
+```json
+{
+  "image_source": "https://example.com/blurry-photo.jpg",
+  "type": "url"
+}
+```
+Default: `type="url"`, `scale=2`, `poll_interval=5`, `timeout=50`. No need to specify any extra parameters.
+
+#### Example 2: Enhance a local image with 4x upscaling
+
+> "Enhance this photo to 4x resolution: D:\\photos\\family.jpg"
+
+The agent will call `enhance_image_sync` with:
+```json
+{
+  "image_source": "D:\\photos\\family.jpg",
+  "type": "local",
+  "scale": 4
+}
+```
+`scale=4` means the image will be upscaled by 4x. The MCP Server auto-uploads the local file to TOS.
+
+#### Example 3: Colorize a B&W photo with custom timeout
+
+> "Colorize this black-and-white photo, it can take a bit longer: /Users/me/Desktop/old_photo.png"
+
+The agent may call `colorize_image_sync` with a longer timeout:
+```json
+{
+  "image_source": "/Users/me/Desktop/old_photo.png",
+  "type": "local",
+  "timeout": 55
+}
+```
+`timeout=55` means the tool will wait up to 55 seconds before truncating.
+
+#### Example 4: Denoise a noisy photo with faster polling
+
+> "Remove the noise from this image: https://example.com/noisy.jpg"
+
+The agent will call `denoise_image_sync`:
+```json
+{
+  "image_source": "https://example.com/noisy.jpg",
+  "type": "url",
+  "poll_interval": 3,
+  "timeout": 50
+}
+```
+`poll_interval=3` means check every 3 seconds (faster than the default 5 seconds).
+
+#### Example 5: Timeout truncation → manual polling
+
+If a tool times out (50 seconds not enough), you'll get:
+```json
+{
+  "success": true,
+  "status": "processing",
+  "task_id": "img_abc123",
+  "message": "Task is still processing (waited 50 seconds). Please use get_image_task_status to continue polling.",
+  "note": "The synchronous wait for this long-running task has been truncated. Switch to get_image_task_status polling."
+}
+```
+
+Then ask the agent:
+> "Check the status of task img_abc123"
+
+The agent will call `get_image_task_status`:
+```json
+{
+  "task_id": "img_abc123"
+}
+```
+
+Repeat until `status` becomes `"completed"` or `"failed"`.
+
+#### Parameter Combination Reference
+
+| Scenario | `type` | `scale` | `poll_interval` | `timeout` | Notes |
+|---|---|---|---|---|---|
+| Quick URL enhance | `url` (default) | `2` (default) | `5` (default) | `50` (default) | All defaults, just provide `image_source` |
+| Local file enhance | `local` | `2` (default) | `5` (default) | `50` (default) | Must set `type` to `"local"` |
+| 4x upscale | any | `4` | `5` (default) | `50` (default) | Higher scale = larger output |
+| Wait longer | any | any | `5` (default) | `55`-`58` | Increase timeout, but keep under 60s (MCP Agent limit) |
+| Faster response check | any | any | `2`-`3` | `50` (default) | Smaller poll_interval for quicker feedback |
+| Large/slow image | any | any | `5` (default) | `50` (default) | If timeout, use `get_image_task_status` to poll manually |
+| Colorize / Denoise | any | N/A | `5` (default) | `50` (default) | `scale` only applies to `enhance_image_sync` |
 
 ## Provided Tools
 
@@ -295,6 +391,7 @@ Synchronously enhance an image to improve quality and optimize faces.
 |---|---|---|---|---|
 | `image_source` | string | Yes | - | Image URL or local file path (URL must be publicly accessible, links requiring login or signatures are not supported) |
 | `type` | string | No | `url` | `url` or `local` |
+| `scale` | number | No | `2` | Enhancement scale multiplier (e.g. `2` for 2x, `4` for 4x upscaling) |
 | `poll_interval` | number | No | `5` | Poll interval in seconds |
 | `timeout` | number | No | `50` | Sync wait timeout in seconds, returns early when exceeded |
 

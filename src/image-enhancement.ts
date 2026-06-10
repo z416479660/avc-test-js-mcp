@@ -9,6 +9,7 @@ import FormData from 'form-data';
 const EnhanceImageSyncSchema = z.object({
   image_source: z.string().describe('Image URL or local file path (URL must be publicly accessible, login or signed links are not supported)'),
   type: z.enum(['url', 'local']).default('url').describe('Upload type: url=remote image, local=local file'),
+  scale: z.number().default(2).describe('Enhancement scale multiplier, default 2. Controls the upscaling factor for image enhancement (e.g. 2=2x, 4=4x)'),
   poll_interval: z.number().default(5).describe('Polling interval in seconds, default 5'),
   timeout: z.number().default(50).describe('Synchronous wait timeout in seconds, default 50. Returns task_id early when exceeded, use get_image_task_status to continue polling'),
 });
@@ -57,7 +58,7 @@ Best for images with estimated processing time < 1 minute. If the task is not co
     EnhanceImageSyncSchema.shape,
     async (args) => {
       try {
-        const result = await processImageSync(client, args.image_source, args.type, 'enhance', args.poll_interval, args.timeout);
+        const result = await processImageSync(client, args.image_source, args.type, 'enhance', args.poll_interval, args.timeout, args.scale);
         return {
           content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
         };
@@ -233,7 +234,8 @@ async function createImageTask(
   client: AxiosInstance,
   imageSource: string,
   sourceType: string,
-  taskType: string
+  taskType: string,
+  scale?: number
 ): Promise<any> {
   let contentItem: any;
 
@@ -248,7 +250,10 @@ async function createImageTask(
   }
 
   const endpoint = getEndpointByTaskType(taskType);
-  const payload = { model: 'avc-enhance', content: [contentItem] };
+  const payload: any = { model: 'avc-enhance', content: [contentItem] };
+  if (scale !== undefined) {
+    payload.scale = scale;
+  }
   const response = await client.post(endpoint, payload);
   const data = response.data;
 
@@ -289,9 +294,10 @@ async function processImageSync(
   sourceType: string,
   taskType: string,
   pollInterval: number,
-  timeout: number
+  timeout: number,
+  scale?: number
 ): Promise<any> {
-  const createResult = await createImageTask(client, imageSource, sourceType, taskType);
+  const createResult = await createImageTask(client, imageSource, sourceType, taskType, scale);
   if (!createResult.success) {
     return createResult;
   }
