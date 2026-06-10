@@ -9,6 +9,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { setupVideoEnhancementTools } from './video-enhancement.js';
+import { setupImageEnhancementTools } from './image-enhancement.js';
 import { setupSam3Tools } from './sam3.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -74,7 +75,7 @@ async function main(): Promise<void> {
   const server = new McpServer(
     {
       name: 'avc-test-js-mcp',
-      version: '0.3.0',
+      version: '0.4.0',
     },
     {
       capabilities: {
@@ -85,6 +86,9 @@ async function main(): Promise<void> {
 
   // Register video enhancement tools
   setupVideoEnhancementTools(server, baseUrl, apiKey);
+
+  // Register image enhancement tools
+  setupImageEnhancementTools(server, baseUrl, apiKey);
 
   // Register SAM3 tools
   setupSam3Tools(server, sam3BaseUrl, sam3ApiKey, sam3PollInterval, sam3PollMaxAttempts);
