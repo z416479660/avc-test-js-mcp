@@ -18,13 +18,10 @@
 - `enhance_video_sync` - 同步增强视频（阻塞等待，默认50秒截断）
 
 **图片增强**
-- `create_enhance_task` - 创建图片增强任务（异步）
-- `create_colorize_task` - 创建图片上色任务（异步）
-- `create_denoise_task` - 创建图片降噪任务（异步）
-- `get_image_task_status` - 查询图片任务状态
 - `enhance_image_sync` - 同步增强图片（阻塞等待，默认50秒截断）
 - `colorize_image_sync` - 同步上色图片（阻塞等待，默认50秒截断）
 - `denoise_image_sync` - 同步降噪图片（阻塞等待，默认50秒截断）
+- `get_image_task_status` - 查询图片任务状态（同步截断后轮询用）
 
 **图像分割 (SAM3)**
 - `sam3_predict` - SAM3 图像分割（支持本地路径、URL 或 Base64 图片）
@@ -118,7 +115,7 @@ AI 会自动完成：
 重启客户端后，确认工具是否加载成功：
 
 1. 或直接问 AI："你有哪些可用的工具？"
-2. 应看到：`create_task`、`get_task_status`、`enhance_video_sync`、`create_enhance_task`、`create_colorize_task`、`create_denoise_task`、`get_image_task_status`、`enhance_image_sync`、`colorize_image_sync`、`denoise_image_sync`、`sam3_predict`
+2. 应看到：`create_task`、`get_task_status`、`enhance_video_sync`、`enhance_image_sync`、`colorize_image_sync`、`denoise_image_sync`、`get_image_task_status`、`sam3_predict`
 
 ## 配置项
 

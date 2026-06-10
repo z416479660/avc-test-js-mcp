@@ -5,23 +5,7 @@ import * as path from 'path';
 import { z } from 'zod';
 import FormData from 'form-data';
 
-// Schemas - async create tasks
-const CreateEnhanceTaskSchema = z.object({
-  image_source: z.string().describe('Image URL or local file path (URL must be publicly accessible, login or signed links are not supported)'),
-  type: z.enum(['url', 'local']).default('url').describe('Upload type: url=remote image, local=local file'),
-});
-
-const CreateColorizeTaskSchema = z.object({
-  image_source: z.string().describe('Image URL or local file path (URL must be publicly accessible, login or signed links are not supported)'),
-  type: z.enum(['url', 'local']).default('url').describe('Upload type: url=remote image, local=local file'),
-});
-
-const CreateDenoiseTaskSchema = z.object({
-  image_source: z.string().describe('Image URL or local file path (URL must be publicly accessible, login or signed links are not supported)'),
-  type: z.enum(['url', 'local']).default('url').describe('Upload type: url=remote image, local=local file'),
-});
-
-// Schemas - sync tasks
+// Schemas
 const EnhanceImageSyncSchema = z.object({
   image_source: z.string().describe('Image URL or local file path (URL must be publicly accessible, login or signed links are not supported)'),
   type: z.enum(['url', 'local']).default('url').describe('Upload type: url=remote image, local=local file'),
@@ -57,86 +41,6 @@ export function setupImageEnhancementTools(server: McpServer, baseUrl: string, a
     },
     timeout: 60000,
   });
-
-  // ========== Async create task tools ==========
-
-  // create_enhance_task tool (async)
-  server.tool(
-    'create_enhance_task',
-    `Create an image enhancement task (asynchronous).
-
-Two upload methods are supported:
-1. URL upload: provide an image URL
-2. Local upload: provide a local file path, the MCP Server will auto-upload to TOS object storage
-
-After creating a task, a task_id is returned immediately. Use get_image_task_status to poll for results until status becomes "completed" or "failed".`,
-    CreateEnhanceTaskSchema.shape,
-    async (args) => {
-      try {
-        const result = await createImageTask(client, args.image_source, args.type, 'enhance');
-        return {
-          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-        };
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        return {
-          content: [{ type: 'text', text: JSON.stringify({ success: false, error: errorMessage }, null, 2) }],
-        };
-      }
-    }
-  );
-
-  // create_colorize_task tool (async)
-  server.tool(
-    'create_colorize_task',
-    `Create a black-and-white photo colorization task (asynchronous).
-
-Two upload methods are supported:
-1. URL upload: provide an image URL
-2. Local upload: provide a local file path, the MCP Server will auto-upload to TOS object storage
-
-After creating a task, a task_id is returned immediately. Use get_image_task_status to poll for results until status becomes "completed" or "failed".`,
-    CreateColorizeTaskSchema.shape,
-    async (args) => {
-      try {
-        const result = await createImageTask(client, args.image_source, args.type, 'colorize');
-        return {
-          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-        };
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        return {
-          content: [{ type: 'text', text: JSON.stringify({ success: false, error: errorMessage }, null, 2) }],
-        };
-      }
-    }
-  );
-
-  // create_denoise_task tool (async)
-  server.tool(
-    'create_denoise_task',
-    `Create an image denoising task (asynchronous).
-
-Two upload methods are supported:
-1. URL upload: provide an image URL
-2. Local upload: provide a local file path, the MCP Server will auto-upload to TOS object storage
-
-After creating a task, a task_id is returned immediately. Use get_image_task_status to poll for results until status becomes "completed" or "failed".`,
-    CreateDenoiseTaskSchema.shape,
-    async (args) => {
-      try {
-        const result = await createImageTask(client, args.image_source, args.type, 'denoise');
-        return {
-          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-        };
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        return {
-          content: [{ type: 'text', text: JSON.stringify({ success: false, error: errorMessage }, null, 2) }],
-        };
-      }
-    }
-  );
 
   // ========== Sync task tools ==========
 
