@@ -18,10 +18,10 @@ Provides the following MCP Tools:
 - `enhance_video_sync` - Synchronously enhance video (blocking wait, truncated at ~50s by default)
 
 **Image Enhancement**
-- `enhance_image_sync` - Synchronously enhance image (blocking wait, truncated at ~50s by default)
-- `colorize_image_sync` - Synchronously colorize image (blocking wait, truncated at ~50s by default)
-- `denoise_image_sync` - Synchronously denoise image (blocking wait, truncated at ~50s by default)
-- `get_image_task_status` - Query image task status (for polling after sync truncation)
+- `enhance_image_sync` - Enhance image quality and optimize faces (supports URL or local file upload)
+- `colorize_image_sync` - Colorize black-and-white photos (supports URL or local file upload)
+- `denoise_image_sync` - Remove noise from images (supports URL or local file upload)
+- `get_image_task_status` - Query image task status (for polling after sync timeout)
 
 **Image Segmentation (SAM3)**
 - `sam3_predict` - SAM3 image segmentation (supports local path, URL, or Base64 image)
@@ -269,50 +269,92 @@ Synchronously enhance video (blocks until completion).
 
 ### Image Enhancement
 
-#### enhance_image
+Three image processing tools are provided, each targeting a specific use case:
 
-Enhance image quality and optimize faces (synchronous).
+| Tool | Function | Use Case |
+|---|---|---|
+| `enhance_image_sync` | Image quality enhancement & face optimization | Blurry, low-resolution, or degraded photos |
+| `colorize_image_sync` | Black-and-white photo colorization | Restoring old B&W photos with realistic colors |
+| `denoise_image_sync` | Image noise removal | Noisy/grainy photos taken in low light |
 
-> **Best for simple images (estimated processing time < 1 minute).** If the task is not completed within 50 seconds, the tool returns early with a `task_id`, and you need to use `get_image_task_status` to continue querying.
+All three tools share the same parameters and behavior pattern. They are **synchronous** — the tool blocks until the image is processed or the timeout is reached.
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `image_source` | string | Yes | - | Image URL or local file path |
-| `type` | string | No | `url` | `url` or `local` |
-| `poll_interval` | number | No | `5` | Poll interval (seconds) |
-| `timeout` | number | No | `50` | Sync wait timeout (seconds), returns early when exceeded |
+**Supported image formats**: PNG, JPG, JPEG, BMP, WebP, etc.
 
-#### colorize_image
+**Two upload methods**:
+1. **URL upload**: provide a publicly accessible image URL (`type: "url"`)
+2. **Local upload**: provide a local file path, the MCP Server auto-uploads to TOS object storage (`type: "local"`, max file size: 100MB)
 
-Colorize black-and-white photos (synchronous).
+#### enhance_image_sync
 
-> **Best for simple images (estimated processing time < 1 minute).** If the task is not completed within 50 seconds, the tool returns early with a `task_id`, and you need to use `get_image_task_status` to continue querying.
+Synchronously enhance an image to improve quality and optimize faces.
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `image_source` | string | Yes | - | Image URL or local file path |
-| `type` | string | No | `url` | `url` or `local` |
-| `poll_interval` | number | No | `5` | Poll interval (seconds) |
-| `timeout` | number | No | `50` | Sync wait timeout (seconds), returns early when exceeded |
-
-#### denoise_image
-
-Remove noise from images (synchronous).
-
-> **Best for simple images (estimated processing time < 1 minute).** If the task is not completed within 50 seconds, the tool returns early with a `task_id`, and you need to use `get_image_task_status` to continue querying.
+> The tool internally creates a task and polls for the result. If processing completes within the timeout (default 50s), the result is returned directly. If not, the tool returns early with a `task_id` — use `get_image_task_status` to continue polling.
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `image_source` | string | Yes | - | Image URL or local file path |
+| `image_source` | string | Yes | - | Image URL or local file path (URL must be publicly accessible, links requiring login or signatures are not supported) |
 | `type` | string | No | `url` | `url` or `local` |
-| `poll_interval` | number | No | `5` | Poll interval (seconds) |
-| `timeout` | number | No | `50` | Sync wait timeout (seconds), returns early when exceeded |
+| `poll_interval` | number | No | `5` | Poll interval in seconds |
+| `timeout` | number | No | `50` | Sync wait timeout in seconds, returns early when exceeded |
+
+**Normal completion return:**
+```json
+{
+  "success": true,
+  "task_id": "xxx",
+  "status": "completed",
+  "progress": 100,
+  "image_url": "https://..."
+}
+```
+
+**Truncated return (not completed within 50s):**
+```json
+{
+  "success": true,
+  "status": "processing",
+  "task_id": "xxx",
+  "message": "Task is still processing (waited 50 seconds). Please use get_image_task_status to continue polling.",
+  "note": "The synchronous wait for this long-running task has been truncated. Switch to get_image_task_status polling."
+}
+```
+
+#### colorize_image_sync
+
+Synchronously colorize a black-and-white photo with AI.
+
+> Best for old black-and-white photos. The AI will add realistic colors to the image. Supports the same parameters and return format as `enhance_image_sync`.
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `image_source` | string | Yes | - | Image URL or local file path (URL must be publicly accessible, links requiring login or signatures are not supported) |
+| `type` | string | No | `url` | `url` or `local` |
+| `poll_interval` | number | No | `5` | Poll interval in seconds |
+| `timeout` | number | No | `50` | Sync wait timeout in seconds, returns early when exceeded |
+
+**Returns:** Same format as `enhance_image_sync`.
+
+#### denoise_image_sync
+
+Synchronously remove noise from an image.
+
+> Best for grainy/noisy photos taken in low-light conditions or with high ISO settings. Supports the same parameters and return format as `enhance_image_sync`.
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `image_source` | string | Yes | - | Image URL or local file path (URL must be publicly accessible, links requiring login or signatures are not supported) |
+| `type` | string | No | `url` | `url` or `local` |
+| `poll_interval` | number | No | `5` | Poll interval in seconds |
+| `timeout` | number | No | `50` | Sync wait timeout in seconds, returns early when exceeded |
+
+**Returns:** Same format as `enhance_image_sync`.
 
 #### get_image_task_status
 
-Query image processing task status.
+Query image processing task status. Used to poll for results when a sync tool times out.
 
-> The returned `status` field can be: `processing`, `completed`, or `failed`. If `status` is `processing`, you need to wait a few seconds and call this tool again.
+> The returned `status` field can be: `processing`, `completed`, or `failed`. If `status` is `processing`, wait a few seconds and call this tool again.
 
 | Parameter | Type | Required |
 |---|---|---|
@@ -332,16 +374,11 @@ Query image processing task status.
 
 The `message` field only appears when `status` is `processing`, prompting the Agent to continue waiting.
 
-**Truncated return example (not completed within 50s):**
-```json
-{
-  "success": true,
-  "status": "processing",
-  "task_id": "xxx",
-  "message": "Task is still processing (waited 50 seconds). Please use get_image_task_status to continue polling.",
-  "note": "The synchronous wait for this long-running task has been truncated. Switch to get_image_task_status polling."
-}
-```
+#### Recommended Workflow for Image Tools
+
+1. **For most images**: Call `enhance_image_sync` / `colorize_image_sync` / `denoise_image_sync` directly — the tool handles everything and returns the result
+2. **If truncated**: The tool returns a `task_id`, then use `get_image_task_status` to poll until `status` becomes `completed` or `failed`
+3. **If failed**: Check the `error_message` field for details
 
 ### Image Segmentation (SAM3)
 

@@ -18,10 +18,10 @@
 - `enhance_video_sync` - 同步增强视频（阻塞等待，默认50秒截断）
 
 **图片增强**
-- `enhance_image_sync` - 同步增强图片（阻塞等待，默认50秒截断）
-- `colorize_image_sync` - 同步上色图片（阻塞等待，默认50秒截断）
-- `denoise_image_sync` - 同步降噪图片（阻塞等待，默认50秒截断）
-- `get_image_task_status` - 查询图片任务状态（同步截断后轮询用）
+- `enhance_image_sync` - 图片画质增强、人脸优化（支持 URL 或本地文件上传）
+- `colorize_image_sync` - 黑白照片上色（支持 URL 或本地文件上传）
+- `denoise_image_sync` - 图片降噪（支持 URL 或本地文件上传）
+- `get_image_task_status` - 查询图片任务状态（同步超时后轮询用）
 
 **图像分割 (SAM3)**
 - `sam3_predict` - SAM3 图像分割（支持本地路径、URL 或 Base64 图片）
@@ -269,50 +269,92 @@ AI 会根据任务复杂度自动选择同步或异步工具完成任务。
 
 ### 图片增强
 
-#### enhance_image
+提供三个图片处理工具，各针对不同使用场景：
 
-图片增强（画质提升、人脸优化），同步等待完成。
+| 工具 | 功能 | 适用场景 |
+|---|---|---|
+| `enhance_image_sync` | 图片画质增强、人脸优化 | 模糊、低分辨率或画质下降的照片 |
+| `colorize_image_sync` | 黑白照片上色 | 为老旧黑白照片添加逼真色彩 |
+| `denoise_image_sync` | 图片降噪 | 在低光环境或高 ISO 下拍摄的噪点照片 |
 
-> **仅适合简单图片（预计处理时间 < 1 分钟）。** 如果任务在50秒内未完成，工具会提前返回并包含 `task_id`，你需要使用 `get_image_task_status` 继续查询。
+三个工具共享相同的参数和行为模式，均为**同步模式** —— 工具会阻塞等待直到图片处理完成或超时。
+
+**支持的图片格式**：PNG、JPG、JPEG、BMP、WebP 等常见格式。
+
+**两种上传方式**：
+1. **URL 上传**：提供公开可访问的图片 URL（`type: "url"`）
+2. **本地上传**：提供本地文件路径，MCP Server 自动上传到 TOS 对象存储（`type: "local"`，最大文件大小：100MB）
+
+#### enhance_image_sync
+
+同步增强图片画质并优化人脸。
+
+> 工具内部会创建任务并轮询结果。如果在超时时间（默认50秒）内处理完成，直接返回结果；如果未完成，工具会提前返回 `task_id`，使用 `get_image_task_status` 继续轮询。
 
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 |---|---|---|---|---|
-| `image_source` | string | 是 | - | 图片 URL 或本地文件路径 |
+| `image_source` | string | 是 | - | 图片 URL 或本地文件路径（URL 必须公网可访问，不支持需要登录或签名的链接） |
 | `type` | string | 否 | `url` | `url` 或 `local` |
 | `poll_interval` | number | 否 | `5` | 轮询间隔（秒） |
 | `timeout` | number | 否 | `50` | 同步等待超时时间（秒），超过后主动返回 |
 
-#### colorize_image
+**正常完成返回：**
+```json
+{
+  "success": true,
+  "task_id": "xxx",
+  "status": "completed",
+  "progress": 100,
+  "image_url": "https://..."
+}
+```
 
-黑白照片上色，同步等待完成。
+**截断返回（50秒未完成）：**
+```json
+{
+  "success": true,
+  "status": "processing",
+  "task_id": "xxx",
+  "message": "任务仍在处理中（已等待 50 秒）。请使用 get_image_task_status 工具继续查询此任务状态。",
+  "note": "此工具对长任务的同步等待已被截断，请切换到 get_image_task_status 轮询模式。"
+}
+```
 
-> **仅适合简单图片（预计处理时间 < 1 分钟）。** 如果任务在50秒内未完成，工具会提前返回并包含 `task_id`，你需要使用 `get_image_task_status` 继续查询。
+#### colorize_image_sync
+
+同步为黑白照片上色。
+
+> 适用于老旧黑白照片，AI 会为图片添加逼真的色彩。参数和返回格式与 `enhance_image_sync` 相同。
 
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 |---|---|---|---|---|
-| `image_source` | string | 是 | - | 图片 URL 或本地文件路径 |
+| `image_source` | string | 是 | - | 图片 URL 或本地文件路径（URL 必须公网可访问，不支持需要登录或签名的链接） |
 | `type` | string | 否 | `url` | `url` 或 `local` |
 | `poll_interval` | number | 否 | `5` | 轮询间隔（秒） |
 | `timeout` | number | 否 | `50` | 同步等待超时时间（秒），超过后主动返回 |
 
-#### denoise_image
+**返回值：** 与 `enhance_image_sync` 格式相同。
 
-图片降噪，同步等待完成。
+#### denoise_image_sync
 
-> **仅适合简单图片（预计处理时间 < 1 分钟）。** 如果任务在50秒内未完成，工具会提前返回并包含 `task_id`，你需要使用 `get_image_task_status` 继续查询。
+同步去除图片噪点。
+
+> 适用于低光环境或高 ISO 设置下拍摄的噪点/颗粒感照片。参数和返回格式与 `enhance_image_sync` 相同。
 
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 |---|---|---|---|---|
-| `image_source` | string | 是 | - | 图片 URL 或本地文件路径 |
+| `image_source` | string | 是 | - | 图片 URL 或本地文件路径（URL 必须公网可访问，不支持需要登录或签名的链接） |
 | `type` | string | 否 | `url` | `url` 或 `local` |
 | `poll_interval` | number | 否 | `5` | 轮询间隔（秒） |
 | `timeout` | number | 否 | `50` | 同步等待超时时间（秒），超过后主动返回 |
+
+**返回值：** 与 `enhance_image_sync` 格式相同。
 
 #### get_image_task_status
 
-查询图片处理任务状态。
+查询图片处理任务状态。当同步工具超时截断后，使用此工具轮询结果。
 
-> 返回值中的 `status` 字段可能为：`processing`（处理中）、`completed`（已完成）、`failed`（失败）。如果 `status` 为 `processing`，你需要等待几秒后再次调用此工具轮询。
+> 返回值中的 `status` 字段可能为：`processing`（处理中）、`completed`（已完成）、`failed`（失败）。如果 `status` 为 `processing`，等待几秒后再次调用此工具轮询。
 
 | 参数 | 类型 | 必填 |
 |---|---|---|
@@ -332,16 +374,11 @@ AI 会根据任务复杂度自动选择同步或异步工具完成任务。
 
 其中 `message` 字段只在 `status` 为 `processing` 时出现，提示 Agent 继续等待。
 
-**截断返回示例（50秒未完成）：**
-```json
-{
-  "success": true,
-  "status": "processing",
-  "task_id": "xxx",
-  "message": "任务仍在处理中（已等待 50 秒）。请使用 get_image_task_status 工具继续查询此任务状态。",
-  "note": "此工具对长任务的同步等待已被截断，请切换到 get_image_task_status 轮询模式。"
-}
-```
+#### 图片工具推荐工作流
+
+1. **大多数图片**：直接调用 `enhance_image_sync` / `colorize_image_sync` / `denoise_image_sync` —— 工具内部处理一切并返回结果
+2. **如果超时截断**：工具返回 `task_id`，然后用 `get_image_task_status` 轮询直到 `status` 变为 `completed` 或 `failed`
+3. **如果任务失败**：查看 `error_message` 字段了解详情
 
 ### 图像分割 (SAM3)
 
