@@ -1,7 +1,7 @@
 {
   "type": "module",
   "name": "avc-test-js-mcp",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "MCP Server for video enhancement, image enhancement/colorization/denoising, and image segmentation (SAM3)",
   "mcpName": "io.github.z416479660/avc-test-js-mcp",
   "main": "dist/server.js",
