@@ -230,6 +230,19 @@ function getEndpointByTaskType(taskType: string): string {
   }
 }
 
+function getModelByTaskType(taskType: string): string {
+  switch (taskType) {
+    case 'enhance':
+      return 'avc-image-enhance';
+    case 'colorize':
+      return 'avc-image-colorize';
+    case 'denoise':
+      return 'avc-image-denoise';
+    default:
+      throw new Error(`Unknown task_type: ${taskType}`);
+  }
+}
+
 async function createImageTask(
   client: AxiosInstance,
   imageSource: string,
@@ -270,7 +283,7 @@ async function createImageTask(
 
   // Step 4: Call image API
   const endpoint = getEndpointByTaskType(taskType);
-  const payload: any = { model: 'avc-enhance', content: [contentItem] };
+  const payload: any = { model: getModelByTaskType(taskType), content: [contentItem] };
   if (scale !== undefined) {
     payload.scale = scale;
   }
