@@ -183,8 +183,12 @@ async function uploadToTos(filePath: string, signatureData: any): Promise<void> 
     origin_policy: 'policy',
   };
 
+  // Skip fields that are not TOS form fields (url, file_id from backend)
+  // or would cause duplicates (policy is already handled via origin_policy → policy mapping)
+  const skipKeys = new Set(['url', 'file_id', 'policy']);
+
   for (const [key, value] of Object.entries(signatureData)) {
-    if (key === 'url') continue;
+    if (skipKeys.has(key)) continue;
     const formKey = fieldMapping[key] || key;
     formData.append(formKey, String(value));
   }
