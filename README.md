@@ -25,6 +25,7 @@ Provides the following MCP Tools:
 
 **Image Segmentation (SAM3)**
 - `sam3_predict` - SAM3 image segmentation (supports local path, URL, or Base64 image)
+- `get_sam3_task_status` - Query SAM3 task status (for polling after sync timeout)
 
 ## Prerequisites
 
@@ -114,8 +115,8 @@ Or edit `~/.cursor/mcp.json`:
 
 After restarting your client, check if the tools are available:
 
-1. Or ask: "What tools do you have available?"
-2. You should see: `create_task`, `get_task_status`, `enhance_video_sync`, `enhance_image_sync`, `colorize_image_sync`, `denoise_image_sync`, `get_image_task_status`, `sam3_predict`
+1. Ask: "What tools do you have available?"
+2. You should see: `create_task`, `get_task_status`, `enhance_video_sync`, `enhance_image_sync`, `colorize_image_sync`, `denoise_image_sync`, `get_image_task_status`, `sam3_predict`, `get_sam3_task_status`
 
 ## Configuration Options
 
@@ -542,6 +543,46 @@ Example result JSON:
 }
 ```
 
+#### get_sam3_task_status
+
+Query SAM3 segmentation task status. Used to poll for results when `sam3_predict` times out.
+
+> The returned `status` field can be: `processing`, `completed`, or `failed`. If `status` is `processing`, wait a few seconds and call this tool again.
+
+| Parameter | Type | Required |
+|---|---|---|
+| `task_id` | string | Yes |
+
+**Completed return:**
+```json
+{
+  "success": true,
+  "task_id": "xxx",
+  "status": "completed",
+  "result_url": "https://..."
+}
+```
+
+**Processing return:**
+```json
+{
+  "success": true,
+  "task_id": "xxx",
+  "status": "processing",
+  "message": "Task is still processing, please check again later."
+}
+```
+
+**Failed return:**
+```json
+{
+  "success": false,
+  "task_id": "xxx",
+  "status": "failed",
+  "error": "Task failed"
+}
+```
+
 ## FAQ
 
 ### Agent reports timeout when calling tools?
@@ -603,7 +644,7 @@ If the image is very large (e.g., 4K resolution), the base64-encoded data will b
 When `type` is `"local"`:
 1. File is read locally by the MCP Server
 2. Uploaded directly to TOS object storage via pre-signed URL
-3. **Max file size: 100MB**
+3. **Max file size: 100MB** (video and image)
 
 ## Troubleshooting
 

@@ -25,6 +25,7 @@
 
 **图像分割 (SAM3)**
 - `sam3_predict` - SAM3 图像分割（支持本地路径、URL 或 Base64 图片）
+- `get_sam3_task_status` - 查询 SAM3 任务状态（同步超时后轮询用）
 
 ## 前置要求
 
@@ -114,8 +115,8 @@ AI 会自动完成：
 
 重启客户端后，确认工具是否加载成功：
 
-1. 或直接问 AI："你有哪些可用的工具？"
-2. 应看到：`create_task`、`get_task_status`、`enhance_video_sync`、`enhance_image_sync`、`colorize_image_sync`、`denoise_image_sync`、`get_image_task_status`、`sam3_predict`
+1. 直接问 AI："你有哪些可用的工具？"
+2. 应看到：`create_task`、`get_task_status`、`enhance_video_sync`、`enhance_image_sync`、`colorize_image_sync`、`denoise_image_sync`、`get_image_task_status`、`sam3_predict`、`get_sam3_task_status`
 
 ## 配置项
 
@@ -542,6 +543,46 @@ AI 会调用 `get_image_task_status`：
 }
 ```
 
+#### get_sam3_task_status
+
+查询 SAM3 分割任务状态。当 `sam3_predict` 超时截断后，使用此工具轮询结果。
+
+> 返回值中的 `status` 字段可能为：`processing`（处理中）、`completed`（已完成）、`failed`（失败）。如果 `status` 为 `processing`，等待几秒后再次调用此工具轮询。
+
+| 参数 | 类型 | 必填 |
+|---|---|---|
+| `task_id` | string | 是 |
+
+**已完成返回：**
+```json
+{
+  "success": true,
+  "task_id": "xxx",
+  "status": "completed",
+  "result_url": "https://..."
+}
+```
+
+**处理中返回：**
+```json
+{
+  "success": true,
+  "task_id": "xxx",
+  "status": "processing",
+  "message": "Task is still processing, please check again later."
+}
+```
+
+**失败返回：**
+```json
+{
+  "success": false,
+  "task_id": "xxx",
+  "status": "failed",
+  "error": "Task failed"
+}
+```
+
 ## 常见问题
 
 ### Agent 调用工具时报超时怎么办？
@@ -603,7 +644,7 @@ AI 会调用 `get_image_task_status`：
 当 `type` 为 `"local"` 时，MCP Server 会：
 1. 读取本地文件
 2. 通过预签名 URL 直传到 TOS 对象存储
-3. **最大文件大小：100MB**
+3. **最大文件大小：100MB**（视频和图片）
 
 ## 故障排查
 
