@@ -190,29 +190,29 @@ async function uploadToTos(filePath: string, signatureData: any): Promise<void> 
   for (const [key, value] of Object.entries(signatureData)) {
     if (skipKeys.has(key)) continue;
     const formKey = fieldMapping[key] || key;
-    formData.append(formKey, String(value));
+    let formValue = String(value);
+    // If origin_policy is plain JSON (not Base64), encode it to Base64 before sending to TOS.
+    // Different volcengine-tos SDK versions return origin_policy in different formats.
+    if (key === 'origin_policy' && formValue.trim().startsWith('{')) {
+      formValue = Buffer.from(formValue, 'utf-8').toString('base64');
+    }
+    formData.append(formKey, formValue);
   }
 
   const fileName = path.basename(filePath);
   formData.append('file', fs.createReadStream(filePath), fileName);
 
-  const response = await axios.post(signatureData.url, formData, {
-    headers: formData.getHeaders(),
-    maxBodyLength: Infinity,
-    maxContentLength: Infinity,
-  });
-
-  if (response.status >= 400) {
-    const debugInfo = JSON.stringify({
-      status: response.status,
-      statusText: response.statusText,
-      data: response.data,
-      url: signatureData.url,
-      signatureFields: Object.keys(signatureData),
-      fileName,
-      fileSize: fs.statSync(filePath).size,
-    }, null, 2);
-    throw new Error(`TOS upload failed: ${response.status} ${response.statusText}\nDebug info: ${debugInfo}`);
+  try {
+    await axios.post(signatureData.url, formData, {
+      headers: formData.getHeaders(),
+      maxBodyLength: Infinity,
+      maxContentLength: Infinity,
+    });
+  } catch (error: any) {
+    const detail = error.response
+      ? `status=${error.response.status} statusText=${error.response.statusText} data=${JSON.stringify(error.response.data)} url=${signatureData.url?.substring(0, 80)}...`
+      : error.message;
+    throw new Error(`TOS upload failed: ${detail}`);
   }
 }
 
