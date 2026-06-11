@@ -152,25 +152,71 @@ async function getTosSignature(client: AxiosInstance, fileName: string): Promise
 
 async function uploadToTos(filePath: string, signatureData: any): Promise<void> {
   const formData = new FormData();
-  const objectKey = decodeURIComponent(new URL(signatureData.url).pathname.slice(1));
-  formData.append('key', objectKey);
 
-  const fieldMapping: Record<string, string> = {
-    algorithm: 'x-tos-algorithm',
-    credential: 'x-tos-credential',
-    date: 'x-tos-date',
-    signature: 'x-tos-signature',
-    origin_policy: 'policy',
-  };
+  // Parse policy to extract key and bucket from conditions, ensuring 100% match with signature
+  let tosKey: string | undefined;
+  let tosBucket: string | undefined;
+  if (signatureData.origin_policy) {
+    try {
+      // origin_policy might be Base64-encoded JSON (TOS standard) or plain JSON (SAM3-style)
+      let policyStr = signatureData.origin_policy;
+      let policyJson: any;
+      try {
+        policyJson = JSON.parse(Buffer.from(policyStr, 'base64').toString('utf-8'));
+      } catch {
+        policyJson = JSON.parse(policyStr);
+      }
+      if (policyJson.conditions && Array.isArray(policyJson.conditions)) {
+        for (const cond of policyJson.conditions) {
+          if (cond && typeof cond === 'object') {
+            if ('key' in cond) tosKey = cond.key;
+            if ('bucket' in cond) tosBucket = cond.bucket;
+          }
+        }
+      }
+    } catch {
+      // Fallback: ignore parse errors, use URL pathname
+    }
+  }
 
-  for (const [key, value] of Object.entries(signatureData)) {
-    if (key === 'url') continue;
-    const formKey = fieldMapping[key] || key;
-    formData.append(formKey, String(value));
+  // Fallback key extraction from URL if policy parsing failed
+  if (!tosKey) {
+    tosKey = decodeURIComponent(new URL(signatureData.url).pathname.slice(1));
+  }
+
+  formData.append('key', tosKey);
+  if (tosBucket) {
+    formData.append('bucket', tosBucket);
+  }
+
+  // Append signature fields exactly as SAM3 does (explicit, no loop)
+  if (signatureData.origin_policy) {
+    formData.append('policy', String(signatureData.origin_policy));
+  }
+  if (signatureData.algorithm) {
+    formData.append('x-tos-algorithm', String(signatureData.algorithm));
+  }
+  if (signatureData.credential) {
+    formData.append('x-tos-credential', String(signatureData.credential));
+  }
+  if (signatureData.date) {
+    formData.append('x-tos-date', String(signatureData.date));
+  }
+  if (signatureData.signature) {
+    formData.append('x-tos-signature', String(signatureData.signature));
   }
 
   const fileName = path.basename(filePath);
   formData.append('file', fs.createReadStream(filePath), fileName);
+
+  // Debug: log what we are sending
+  const debugFields: string[] = [];
+  // @ts-ignore — internal accessor for debugging
+  const formStream = formData as any;
+  if (formStream._streams) {
+    debugFields.push(`streams_count=${formStream._streams.length}`);
+  }
+  console.error(`[TOS Upload Debug] url=${signatureData.url?.substring(0, 60)}... key=${tosKey} bucket=${tosBucket} file=${fileName}`);
 
   try {
     await axios.post(signatureData.url, formData, {
