@@ -172,23 +172,17 @@ async function uploadToTos(filePath: string, signatureData: any): Promise<void> 
   const fileName = path.basename(filePath);
   formData.append('file', fs.createReadStream(filePath), fileName);
 
-  const response = await axios.post(signatureData.url, formData, {
-    headers: formData.getHeaders(),
-    maxBodyLength: Infinity,
-    maxContentLength: Infinity,
-  });
-
-  if (response.status >= 400) {
-    const debugInfo = JSON.stringify({
-      status: response.status,
-      statusText: response.statusText,
-      data: response.data,
-      url: signatureData.url,
-      signatureFields: Object.keys(signatureData),
-      fileName,
-      fileSize: fs.statSync(filePath).size,
-    }, null, 2);
-    throw new Error(`TOS upload failed: ${response.status} ${response.statusText}\nDebug info: ${debugInfo}`);
+  try {
+    await axios.post(signatureData.url, formData, {
+      headers: formData.getHeaders(),
+      maxBodyLength: Infinity,
+      maxContentLength: Infinity,
+    });
+  } catch (error: any) {
+    const detail = error.response
+      ? `status=${error.response.status} statusText=${error.response.statusText} data=${JSON.stringify(error.response.data)} url=${signatureData.url?.substring(0, 80)}...`
+      : error.message;
+    throw new Error(`TOS upload failed: ${detail}`);
   }
 }
 
@@ -208,16 +202,42 @@ async function createTask(
 
   if (sourceType === 'local') {
     const fileInfo = checkLocalFile(videoSource);
-    const signatureData = await getTosSignature(client, fileInfo.fileName);
-    await uploadToTos(videoSource, signatureData);
+
+    // Step 1: Get TOS signature
+    let signatureData: any;
+    try {
+      signatureData = await getTosSignature(client, fileInfo.fileName);
+    } catch (error: any) {
+      const detail = error.response ? `status=${error.response.status} data=${JSON.stringify(error.response.data)}` : error.message;
+      return { success: false, error: `[Step 1: TOS signature failed] ${detail}` };
+    }
+
+    // Step 2: Upload to TOS
+    try {
+      await uploadToTos(videoSource, signatureData);
+    } catch (error: any) {
+      const detail = error.response
+        ? `status=${error.response.status} statusText=${error.response.statusText} url=${signatureData.url?.substring(0, 80)}...`
+        : error.message;
+      return { success: false, error: `[Step 2: TOS upload failed] ${detail}` };
+    }
+
+    // Step 3: Parse file_id
     const fileId = parseFileIdFromUrl(signatureData.url);
     contentItem = { type: 'video_file', file_id: fileId, file_name: fileInfo.fileName };
   } else {
     contentItem = { type: 'video_url', video_url: { url: videoSource } };
   }
 
+  // Step 4: Call video API
   const payload = { model: 'avc-enhance', content: [contentItem], resolution };
-  const response = await client.post('/api/v3/contents/generations/tasks', payload);
+  let response: any;
+  try {
+    response = await client.post('/api/v3/contents/generations/tasks', payload);
+  } catch (error: any) {
+    const detail = error.response ? `status=${error.response.status} data=${JSON.stringify(error.response.data)}` : error.message;
+    return { success: false, error: `[Step 4: API call failed] ${detail}` };
+  }
   const data = response.data;
 
   if (data.code !== 0 && data.code !== 200) {
