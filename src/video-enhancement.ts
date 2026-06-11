@@ -160,10 +160,11 @@ async function uploadToTos(filePath: string, signatureData: any): Promise<void> 
     credential: 'x-tos-credential',
     date: 'x-tos-date',
     signature: 'x-tos-signature',
+    origin_policy: 'policy',
   };
 
   for (const [key, value] of Object.entries(signatureData)) {
-    if (key === 'url' || key === 'origin_policy') continue;
+    if (key === 'url') continue;
     const formKey = fieldMapping[key] || key;
     formData.append(formKey, String(value));
   }
