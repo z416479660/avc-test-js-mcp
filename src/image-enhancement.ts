@@ -48,7 +48,7 @@ export function setupImageEnhancementTools(server: McpServer, baseUrl: string, a
   // enhance_image_sync tool
   server.tool(
     'enhance_image_sync',
-    `Synchronously enhance an image to improve quality and optimize faces.
+    `Enhance/upscale an image to improve quality (图片增强/放大/超分辨率). Use this tool ONLY for image enhancement and upscaling tasks.
 
 Two upload methods are supported:
 1. URL upload: provide an image URL
@@ -74,7 +74,7 @@ Best for images with estimated processing time < 1 minute. If the task is not co
   // colorize_image_sync tool
   server.tool(
     'colorize_image_sync',
-    `Synchronously colorize a black-and-white photo.
+    `Colorize a black-and-white photo (黑白照片上色/旧照片上色). Use this tool ONLY for adding color to grayscale or black-and-white images.
 
 Two upload methods are supported:
 1. URL upload: provide an image URL
@@ -100,7 +100,7 @@ Best for images with estimated processing time < 1 minute. If the task is not co
   // denoise_image_sync tool
   server.tool(
     'denoise_image_sync',
-    `Synchronously remove noise from an image.
+    `Remove noise from an image (图片降噪/去噪). Use this tool ONLY for denoising noisy or grainy images.
 
 Two upload methods are supported:
 1. URL upload: provide an image URL
