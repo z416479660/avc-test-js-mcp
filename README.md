@@ -583,6 +583,15 @@ Query SAM3 segmentation task status. Used to poll for results when `sam3_predict
 }
 ```
 
+## Recent Updates
+
+### v0.4.x - Image Enhancement
+
+- **Image Enhancement** (`enhance_image_sync`) - Enhance image quality and optimize faces, supports 2x/4x upscaling
+- **Image Colorization** (`colorize_image_sync`) - Colorize black-and-white photos with AI
+- **Image Denoising** (`denoise_image_sync`) - Remove noise from low-light/high-ISO photos
+- All image tools support both URL and local file upload (auto-upload to TOS)
+
 ## FAQ
 
 ### Agent reports timeout when calling tools?

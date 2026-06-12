@@ -583,6 +583,15 @@ AI 会调用 `get_image_task_status`：
 }
 ```
 
+## 近期更新
+
+### v0.4.x - 图片增强
+
+- **图片增强** (`enhance_image_sync`) - 图片画质增强、人脸优化，支持 2x/4x 放大
+- **图片上色** (`colorize_image_sync`) - AI 黑白照片上色
+- **图片降噪** (`denoise_image_sync`) - 低光/高 ISO 噪点照片降噪
+- 图片工具均支持 URL 和本地文件上传（自动上传到 TOS）
+
 ## 常见问题
 
 ### Agent 调用工具时报超时怎么办？
